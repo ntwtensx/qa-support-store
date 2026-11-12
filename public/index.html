@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>QA-Support Store V5.0 | Rocket Inventory</title>
+  <title>QA-Support Store | Enterprise Inventory</title>
+  <!-- เทคโนโลยี UI & Libraries -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -11,18 +12,20 @@
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
   <style>
+    /* ตั้งค่าฟอนต์และอนิเมชันพื้นฐาน */
     body { font-family: 'Prompt', sans-serif; background-color: #f0fdf4; -webkit-tap-highlight-color: transparent; }
-    .btn-bounce:active { transform: scale(0.95); }
-    .fade-in { animation: fadeIn 0.25s ease-out; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .btn-bounce:active { transform: scale(0.96); }
+    .fade-in { animation: fadeIn 0.2s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
     
+    /* สถานะสินค้าที่ตรวจสอบแล้ว */
     .managed-item { background-color: #fef9c3 !important; border-color: #facc15 !important; }
     
-    /* Viewfinder Laser Scan Effect */
+    /* เส้นเลเซอร์จำลองการสแกนในกรอบกล้องจริง */
     @keyframes scanLaser {
-      0% { top: 10%; }
-      50% { top: 88%; }
-      100% { top: 10%; }
+      0% { top: 12%; }
+      50% { top: 86%; }
+      100% { top: 12%; }
     }
     .laser-line {
       position: absolute;
@@ -30,13 +33,13 @@
       right: 8%;
       height: 2px;
       background: #10b981;
-      box-shadow: 0 0 8px #10b981, 0 0 15px #34d399;
-      animation: scanLaser 2.2s infinite ease-in-out;
+      box-shadow: 0 0 8px #10b981, 0 0 14px #34d399;
+      animation: scanLaser 2s infinite ease-in-out;
       z-index: 20;
       pointer-events: none;
     }
 
-    /* Z-Index Hierarchy */
+    /* ลำดับชั้นการแสดงผลหน้าต่าง (Z-Index Hierarchy) */
     .z-header { z-index: 20; }
     .z-modal-lower { z-index: 50; }
     .z-modal-top { z-index: 70; }
@@ -46,46 +49,42 @@
 <body class="text-gray-700 h-screen flex flex-col overflow-hidden select-none">
 
   <!-- =========================================================
-       🔒 PIN LOCK SCREEN MODAL (บังคับยืนยันตัวตนก่อนใช้งานเสมอ)
+       🔒 PIN LOCK SCREEN MODAL (หน้าต่างยืนยันตัวตนก่อนใช้งาน)
        ========================================================= -->
   <div id="pin-lock-modal" class="fixed inset-0 bg-gradient-to-br from-emerald-900 via-emerald-800 to-teal-900 z-lockscreen flex items-center justify-center p-4">
-    <div class="bg-white/95 backdrop-blur-md w-full max-w-sm rounded-3xl shadow-2xl p-6 text-center fade-in border border-emerald-200">
-      <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-inner">
-        <i class="fa-solid fa-shield-halved text-3xl"></i>
+    <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6 text-center fade-in border border-emerald-200">
+      <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
+        <i class="fa-solid fa-shield-halved text-2xl"></i>
       </div>
-      <h2 class="text-xl font-bold text-gray-800">QA-Support Store V5.0</h2>
-      <p class="text-xs text-gray-500 mb-4">เลือกบัญชีผู้ใช้งานและกรอกรหัส PIN 6 หลัก</p>
+      <h2 class="text-lg font-bold text-gray-800 mb-3">เข้าสู่ระบบ QA-Support Store</h2>
 
-      <!-- Quick Select Store Account -->
-      <div class="grid grid-cols-2 gap-2 mb-4 bg-gray-100 p-1.5 rounded-xl">
+      <!-- ปุ่มสลับบัญชีผู้ใช้งาน -->
+      <div class="grid grid-cols-2 gap-2 mb-3 bg-gray-100 p-1.5 rounded-xl">
         <button type="button" id="acc-btn-staff" onclick="selectLoginAccount('test@store')" class="py-2 px-2 rounded-lg text-xs font-bold transition flex flex-col items-center justify-center bg-emerald-600 text-white shadow">
           <span><i class="fa-solid fa-user-tag mr-1"></i> test@store</span>
           <span class="text-[10px] font-normal opacity-90">พนักงานร้านค้า</span>
         </button>
         <button type="button" id="acc-btn-admin" onclick="selectLoginAccount('admin@store')" class="py-2 px-2 rounded-lg text-xs font-bold transition flex flex-col items-center justify-center text-gray-600 hover:bg-white/60">
           <span><i class="fa-solid fa-crown mr-1 text-amber-500"></i> admin@store</span>
-          <span class="text-[10px] font-normal opacity-80">ผู้จัดการ (แก้ไขลึก)</span>
+          <span class="text-[10px] font-normal opacity-80">ผู้ดูแลระบบ</span>
         </button>
       </div>
 
-      <!-- Account Input (เผื่อพิมพ์เอง) -->
-      <div class="mb-3">
-        <input type="text" id="login-email" value="test@store" readonly class="w-full text-center text-sm font-mono font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg py-1.5 focus:outline-none">
-      </div>
+      <input type="hidden" id="login-email" value="test@store">
 
-      <!-- 6-Dot PIN Visualizer -->
+      <!-- จุดแสดงรหัส PIN 6 หลัก -->
       <div class="flex justify-center gap-3 my-4" id="pin-dots">
-        <span class="w-4 h-4 rounded-full border-2 border-emerald-500 bg-transparent transition-all"></span>
-        <span class="w-4 h-4 rounded-full border-2 border-emerald-500 bg-transparent transition-all"></span>
-        <span class="w-4 h-4 rounded-full border-2 border-emerald-500 bg-transparent transition-all"></span>
-        <span class="w-4 h-4 rounded-full border-2 border-emerald-500 bg-transparent transition-all"></span>
-        <span class="w-4 h-4 rounded-full border-2 border-emerald-500 bg-transparent transition-all"></span>
-        <span class="w-4 h-4 rounded-full border-2 border-emerald-500 bg-transparent transition-all"></span>
+        <span class="w-3.5 h-3.5 rounded-full border-2 border-emerald-500 bg-transparent transition-all"></span>
+        <span class="w-3.5 h-3.5 rounded-full border-2 border-emerald-500 bg-transparent transition-all"></span>
+        <span class="w-3.5 h-3.5 rounded-full border-2 border-emerald-500 bg-transparent transition-all"></span>
+        <span class="w-3.5 h-3.5 rounded-full border-2 border-emerald-500 bg-transparent transition-all"></span>
+        <span class="w-3.5 h-3.5 rounded-full border-2 border-emerald-500 bg-transparent transition-all"></span>
+        <span class="w-3.5 h-3.5 rounded-full border-2 border-emerald-500 bg-transparent transition-all"></span>
       </div>
       <p id="pin-error-msg" class="text-xs text-red-500 font-semibold h-4 mb-2"></p>
 
-      <!-- Tactical Numpad -->
-      <div class="grid grid-cols-3 gap-2.5 max-w-[260px] mx-auto">
+      <!-- แป้นตัวเลข PIN -->
+      <div class="grid grid-cols-3 gap-2.5 max-w-[250px] mx-auto">
         <button type="button" onclick="pressPin('1')" class="h-12 rounded-xl bg-gray-100 hover:bg-emerald-50 active:bg-emerald-200 text-xl font-bold text-gray-800 transition">1</button>
         <button type="button" onclick="pressPin('2')" class="h-12 rounded-xl bg-gray-100 hover:bg-emerald-50 active:bg-emerald-200 text-xl font-bold text-gray-800 transition">2</button>
         <button type="button" onclick="pressPin('3')" class="h-12 rounded-xl bg-gray-100 hover:bg-emerald-50 active:bg-emerald-200 text-xl font-bold text-gray-800 transition">3</button>
@@ -99,20 +98,17 @@
         <button type="button" onclick="pressPin('0')" class="h-12 rounded-xl bg-gray-100 hover:bg-emerald-50 active:bg-emerald-200 text-xl font-bold text-gray-800 transition">0</button>
         <button type="button" onclick="backspacePin()" class="h-12 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition"><i class="fa-solid fa-delete-left"></i></button>
       </div>
-
-      <p class="text-[11px] text-gray-400 mt-4">รหัส PIN ทดลองระบบ: <span class="font-mono font-bold text-emerald-700">000000</span></p>
     </div>
   </div>
 
   <!-- =========================================================
-       🧭 TOP HEADER & UNIFIED MENUBAR (แถบเมนูมาตรฐานเดียวกัน)
+       🧭 TOP HEADER & UNIFIED MENUBAR (แถบเมนูหลักมาตรฐานเดียวกัน)
        ========================================================= -->
   <header class="bg-emerald-600 text-white shadow-lg z-header">
-    <!-- Top Brand & Alerts Row -->
     <div class="px-4 pt-3 pb-2 flex justify-between items-center max-w-2xl mx-auto">
       <div class="flex items-center gap-2.5 cursor-pointer" onclick="switchTab('inventory')">
         <div class="bg-white/15 p-2 rounded-xl">
-          <i class="fa-solid fa-rocket text-lg text-emerald-100"></i>
+          <i class="fa-solid fa-boxes-packing text-lg text-emerald-100"></i>
         </div>
         <div>
           <h1 class="text-sm font-bold leading-tight flex items-center gap-1.5">
@@ -121,34 +117,27 @@
           </h1>
           <div id="db-status-badge" onclick="showDbStatusDetail(event)" class="inline-flex items-center gap-1 text-[10px] text-emerald-100 mt-0.5 cursor-pointer">
             <span id="db-status-dot" class="w-2 h-2 rounded-full bg-yellow-300 animate-pulse"></span>
-            <span id="db-status-text">กำลังตรวจสอบฐานข้อมูล...</span>
+            <span id="db-status-text">กำลังเชื่อมต่อ...</span>
           </div>
         </div>
       </div>
 
-      <!-- Utility & Notification Actions -->
+      <!-- ปุ่มแจ้งเตือนและออกจากระบบ -->
       <div class="flex items-center gap-1.5">
-        <!-- ปุ่มสร้างข้อมูลทดสอบ (แสดงเด่นสำหรับ Admin) -->
-        <button id="btn-seed-demo" onclick="seedDemoData()" title="สร้างข้อมูลตัวอย่าง 50 รายการ" class="p-2 hover:bg-emerald-700 rounded-full transition text-emerald-100 hover:text-white">
-          <i class="fa-solid fa-wand-magic-sparkles text-base"></i>
-        </button>
-        <!-- ปฏิทินหมดอายุเดือนหน้า -->
         <button onclick="checkNextMonth()" title="หมดอายุเดือนหน้า" class="relative p-2 hover:bg-emerald-700 rounded-full transition">
           <i class="fa-regular fa-calendar-days text-lg"></i>
         </button>
-        <!-- กระดิ่งหมดอายุพรุ่งนี้ -->
         <button onclick="checkTomorrow()" title="หมดอายุพรุ่งนี้" class="relative p-2 hover:bg-emerald-700 rounded-full transition">
           <i class="fa-regular fa-bell text-lg"></i>
           <span id="bell-dot" class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-emerald-600 hidden"></span>
         </button>
-        <!-- ปุ่มล็อกหน้าจอ / เปลี่ยนบัญชี -->
-        <button onclick="lockScreen()" title="ล็อกหน้าจอ / เปลี่ยนผู้ใช้" class="p-2 hover:bg-emerald-700 rounded-full transition text-emerald-100 hover:text-white">
+        <button onclick="lockScreen()" title="สลับบัญชี / ล็อกหน้าจอ" class="p-2 hover:bg-emerald-700 rounded-full transition text-emerald-100 hover:text-white">
           <i class="fa-solid fa-right-from-bracket text-base"></i>
         </button>
       </div>
     </div>
 
-    <!-- Unified Navigation Menubar (รูปแบบเดียวกันทั้งหมด 3 เมนูหลัก) -->
+    <!-- แถบเมนูหลักรูปแบบเดียวกัน (Unified Navigation Bar) -->
     <nav class="px-4 pb-3 max-w-2xl mx-auto">
       <div class="grid grid-cols-3 gap-1.5 bg-emerald-700/70 p-1 rounded-xl">
         <button id="nav-tab-inventory" onclick="switchTab('inventory')" class="py-2 px-2 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition bg-white text-emerald-700 shadow">
@@ -172,64 +161,57 @@
        ========================================================= -->
   <main id="main-content" class="flex-1 overflow-y-auto p-4 relative">
     
-    <!-- Loading Overlay -->
+    <!-- สถานะกำลังโหลด -->
     <div id="loading" class="hidden flex flex-col justify-center items-center py-20 text-emerald-600">
-      <i class="fa-solid fa-circle-notch fa-spin text-4xl mb-2"></i>
-      <p class="text-sm font-medium">กำลังประมวลผลข้อมูล...</p>
+      <i class="fa-solid fa-circle-notch fa-spin text-3xl mb-2"></i>
+      <p class="text-xs font-medium">กำลังประมวลผล...</p>
     </div>
 
     <!-- ---------------------------------------------------------
-         PAGE 1: หน้าหลัก PMA ตามหมวดหมู่ (92 หมวดหมู่ + ค้นหาอัจฉริยะ)
+         PAGE 1: รายการหมวดหมู่ PMA (92 หมวดหมู่)
          --------------------------------------------------------- -->
     <div id="page-categories" class="fade-in max-w-2xl mx-auto pb-24">
-      <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-100 mb-4">
-        <div class="flex justify-between items-center mb-3">
-          <h2 class="text-base sm:text-lg font-bold text-emerald-800 border-l-4 border-emerald-500 pl-2.5">
-            หมวดหมู่สินค้า (PMA Directory)
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-100 mb-3">
+        <div class="flex justify-between items-center mb-2.5">
+          <h2 class="text-base font-bold text-emerald-800 border-l-4 border-emerald-500 pl-2.5">
+            หมวดหมู่สินค้า (PMA)
           </h2>
           <span id="pma-total-badge" class="text-[11px] bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full font-bold">92 หมวดหมู่</span>
         </div>
 
-        <!-- Search & Filter Bar -->
         <div class="flex flex-col sm:flex-row gap-2">
           <div class="relative flex-1">
-            <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400 text-sm"></i>
-            <input type="text" id="pma-search-input" oninput="filterPmaList()" placeholder="ค้นหารหัส PMA (เช่น 40) หรือชื่อหมวดหมู่..." class="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 bg-gray-50">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-gray-400 text-sm"></i>
+            <input type="text" id="pma-search-input" oninput="filterPmaList()" placeholder="ค้นหารหัส หรือชื่อหมวดหมู่ PMA..." class="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 bg-gray-50">
           </div>
-          <button id="btn-filter-active-pma" onclick="toggleActivePmaOnly()" class="px-3 py-2 rounded-xl text-xs font-bold border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition whitespace-nowrap">
+          <button id="btn-filter-active-pma" onclick="toggleActivePmaOnly()" class="px-3 py-1.5 rounded-xl text-xs font-bold border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition whitespace-nowrap">
             <i class="fa-solid fa-filter mr-1"></i> <span id="filter-pma-label">แสดงทั้งหมด</span>
           </button>
         </div>
       </div>
 
-      <!-- PMA Cards Grid -->
       <div id="category-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5"></div>
     </div>
 
     <!-- ---------------------------------------------------------
-         PAGE 2: รายการสินค้าภายในหมวดหมู่ PMA ที่เลือก
+         PAGE 2: รายการสินค้าภายในหมวดหมู่ PMA
          --------------------------------------------------------- -->
     <div id="page-items" class="hidden fade-in max-w-2xl mx-auto pb-24">
-      <button onclick="switchTab('inventory')" class="mb-3 text-emerald-600 hover:text-emerald-800 font-bold text-sm flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-lg shadow-sm border border-emerald-100">
-        <i class="fa-solid fa-chevron-left"></i> กลับหน้าหมวดหมู่ PMA
+      <button onclick="switchTab('inventory')" class="mb-3 text-emerald-600 hover:text-emerald-800 font-bold text-xs flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-lg shadow-sm border border-emerald-100">
+        <i class="fa-solid fa-chevron-left"></i> ย้อนกลับ
       </button>
-      <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-100 mb-3 flex justify-between items-center">
-        <div>
-          <span class="text-[10px] uppercase tracking-wider text-emerald-600 font-bold">หมวดหมู่สินค้า</span>
-          <h2 id="current-category-title" class="text-base sm:text-lg font-bold text-gray-800">รายการสินค้า</h2>
-        </div>
-        <span class="text-[11px] text-gray-500 bg-gray-100 px-2.5 py-1 rounded-lg font-medium">
-          <i class="fa-solid fa-arrow-down-short-wide text-emerald-600 mr-1"></i>เรียงวันหมดอายุ
-        </span>
+      <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-emerald-100 mb-3 flex justify-between items-center">
+        <h2 id="current-category-title" class="text-sm sm:text-base font-bold text-gray-800">รายการสินค้า</h2>
+        <span class="text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded font-medium">เรียงตามวันหมดอายุ</span>
       </div>
-      <div id="item-list" class="space-y-2.5"></div>
+      <div id="item-list" class="space-y-2"></div>
     </div>
 
     <!-- ---------------------------------------------------------
-         PAGE 3: ระบบรับสินค้าเข้า (Smart Inbound + Live Camera Viewfinder)
+         PAGE 3: ระบบรับสินค้าเข้า (Smart Inbound)
          --------------------------------------------------------- -->
     <div id="page-inbound" class="hidden fade-in max-w-md mx-auto pb-24">
-      <!-- Progress Stepper -->
+      <!-- แถบลำดับขั้นตอน -->
       <div class="flex justify-between items-center mb-4 px-2">
         <div class="flex items-center gap-1.5">
           <div id="step-dot-1" class="w-7 h-7 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center font-bold shadow">1</div>
@@ -238,37 +220,30 @@
         <div class="flex-1 h-1 bg-gray-200 mx-2 rounded"><div id="step-line-1" class="h-full bg-emerald-600 w-0 transition-all duration-300 rounded"></div></div>
         <div class="flex items-center gap-1.5">
           <div id="step-dot-2" class="w-7 h-7 rounded-full bg-gray-200 text-gray-500 text-xs flex items-center justify-center font-bold transition-all">2</div>
-          <span class="text-xs font-medium text-gray-500" id="step-label-2">ชั้นวาง PL</span>
+          <span class="text-xs font-medium text-gray-500">Planogram</span>
         </div>
         <div class="flex-1 h-1 bg-gray-200 mx-2 rounded"><div id="step-line-2" class="h-full bg-emerald-600 w-0 transition-all duration-300 rounded"></div></div>
         <div class="flex items-center gap-1.5">
           <div id="step-dot-3" class="w-7 h-7 rounded-full bg-gray-200 text-gray-500 text-xs flex items-center justify-center font-bold transition-all">3</div>
-          <span class="text-xs font-medium text-gray-500" id="step-label-3">บันทึกวันที่</span>
+          <span class="text-xs font-medium text-gray-500">ข้อมูลสินค้า</span>
         </div>
       </div>
 
-      <!-- STEP 1: สแกนบาร์โค้ดสินค้า + กล้องแสดงภาพในจอจริง -->
+      <!-- STEP 1: สแกนบาร์โค้ดสินค้า -->
       <div id="inbound-step-1" class="bg-white p-5 rounded-2xl shadow-md border border-emerald-100">
-        <div class="flex justify-between items-center mb-3">
-          <h2 class="text-lg font-bold text-gray-800"><i class="fa-solid fa-barcode text-emerald-600 mr-1.5"></i>สแกนบาร์โค้ดสินค้า</h2>
-          <span class="text-[11px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-semibold">Auto-Lookup</span>
-        </div>
+        <h2 class="text-base font-bold text-gray-800 mb-3"><i class="fa-solid fa-barcode text-emerald-600 mr-1.5"></i>สแกนบาร์โค้ดสินค้า (ID)</h2>
 
-        <!-- Live Camera Viewfinder Box (ภาพจำลองในจอจริง + ปุ่มขออนุญาตเปิดกล้องชัดเจน) -->
-        <div class="relative bg-gray-900 rounded-2xl overflow-hidden mb-4 border-2 border-emerald-500/40 shadow-inner min-h-[210px] flex flex-col items-center justify-center">
-          <!-- Placeholder UI ก่อนเปิดกล้อง -->
-          <div id="camera-placeholder-1" class="text-center p-5 text-white">
-            <div class="w-14 h-14 rounded-full bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center mx-auto mb-2.5">
-              <i class="fa-solid fa-camera text-2xl text-emerald-400"></i>
+        <!-- กรอบแสดงภาพกล้องสแกนในจอจริง -->
+        <div class="relative bg-gray-900 rounded-2xl overflow-hidden mb-4 border-2 border-emerald-500/40 shadow-inner min-h-[200px] flex flex-col items-center justify-center">
+          <div id="camera-placeholder-1" class="text-center p-4 text-white">
+            <div class="w-12 h-12 rounded-full bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center mx-auto mb-2.5">
+              <i class="fa-solid fa-camera text-xl text-emerald-400"></i>
             </div>
-            <p class="text-sm font-semibold mb-1">ช่องสแกนบาร์โค้ดผ่านกล้อง</p>
-            <p class="text-[11px] text-gray-400 mb-3">กดปุ่มด้านล่างเพื่อขอสิทธิ์ใช้งานกล้องถ่ายรูป</p>
             <button type="button" onclick="startLiveCamera(1)" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl shadow-lg transition btn-bounce">
               <i class="fa-solid fa-video mr-1.5"></i> ขออนุญาตเปิดกล้องสแกน
             </button>
           </div>
 
-          <!-- จอแสดงภาพกล้องจริง (Live Stream) -->
           <div id="reader-wrapper-1" class="hidden w-full relative">
             <div id="reader-1" class="w-full"></div>
             <div class="laser-line"></div>
@@ -278,37 +253,28 @@
           </div>
         </div>
 
-        <!-- ช่องกรอกรหัสบาร์โค้ด (รองรับเครื่องยิงบาร์โค้ด Bluetooth หรือพิมพ์มือ) -->
         <div class="space-y-3">
-          <div>
-            <label class="text-xs font-bold text-gray-500 mb-1 block">หรือพิมพ์ / ยิงบาร์โค้ดด้วยเครื่องสแกน:</label>
-            <input type="text" id="input-pid" placeholder="เช่น 8851000000002" class="w-full text-lg p-3 border-2 border-emerald-200 rounded-xl focus:border-emerald-500 focus:outline-none text-center font-mono font-bold tracking-wider" onkeypress="handleEnter(event, 1)">
-          </div>
-          <button type="button" onclick="processBarcodeStep1()" class="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 shadow-lg btn-bounce flex items-center justify-center gap-2">
-            <span>ตรวจสอบรหัสสินค้า</span> <i class="fa-solid fa-arrow-right"></i>
+          <input type="text" id="input-pid" placeholder="ระบุรหัสบาร์โค้ดสินค้า" class="w-full text-lg p-2.5 border-2 border-emerald-200 rounded-xl focus:border-emerald-500 focus:outline-none text-center font-mono font-bold tracking-wider" onkeypress="handleEnter(event, 1)">
+          <button type="button" onclick="processBarcodeStep1()" class="w-full py-2.5 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 shadow btn-bounce flex items-center justify-center gap-2 text-sm">
+            <span>ถัดไป</span> <i class="fa-solid fa-arrow-right"></i>
           </button>
         </div>
       </div>
 
-      <!-- STEP 2: สแกน Planogram (แสดงเฉพาะกรณีเป็นสินค้าใหม่ยังไม่เคยมีในระบบ) -->
+      <!-- STEP 2: สแกน Planogram -->
       <div id="inbound-step-2" class="hidden bg-white p-5 rounded-2xl shadow-md border border-emerald-100">
         <div class="flex justify-between items-center mb-3">
-          <h2 class="text-lg font-bold text-gray-800"><i class="fa-solid fa-layer-group text-emerald-600 mr-1.5"></i>ระบุตำแหน่ง Planogram</h2>
+          <h2 class="text-base font-bold text-gray-800"><i class="fa-solid fa-layer-group text-emerald-600 mr-1.5"></i>สแกน Planogram (PL)</h2>
           <button type="button" onclick="resetInbound()" class="text-xs text-gray-400 hover:text-gray-600 underline">เริ่มใหม่</button>
         </div>
 
-        <div class="bg-amber-50 border border-amber-200 rounded-xl p-2.5 mb-3 text-xs text-amber-800 flex items-center gap-2">
-          <i class="fa-solid fa-sparkles text-amber-500"></i>
-          <span>สินค้าใหม่! ยังไม่เคยบันทึกในระบบ กรุณาระบุตำแหน่งชั้นวาง (PL)</span>
-        </div>
-
-        <!-- Live Camera Viewfinder Box Step 2 -->
         <div class="relative bg-gray-900 rounded-2xl overflow-hidden mb-4 border-2 border-emerald-500/40 shadow-inner min-h-[190px] flex flex-col items-center justify-center">
           <div id="camera-placeholder-2" class="text-center p-4 text-white">
-            <i class="fa-solid fa-qrcode text-2xl text-emerald-400 mb-2"></i>
-            <p class="text-xs text-gray-300 mb-2.5">สแกนป้ายบาร์โค้ดชั้นวาง (Planogram)</p>
+            <div class="w-12 h-12 rounded-full bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center mx-auto mb-2.5">
+              <i class="fa-solid fa-qrcode text-xl text-emerald-400"></i>
+            </div>
             <button type="button" onclick="startLiveCamera(2)" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl shadow transition btn-bounce">
-              <i class="fa-solid fa-video mr-1.5"></i> เปิดกล้องสแกนป้าย PL
+              <i class="fa-solid fa-video mr-1.5"></i> ขออนุญาตเปิดกล้องสแกน
             </button>
           </div>
           <div id="reader-wrapper-2" class="hidden w-full relative">
@@ -322,89 +288,73 @@
 
         <div class="space-y-3">
           <div>
-            <label class="text-xs font-bold text-gray-500 mb-1 block">รหัส Planogram (ขึ้นต้นด้วยเลข PMA 2 หลัก เช่น 40-A-01):</label>
-            <input type="text" id="input-pl" oninput="previewPmaFromPl()" placeholder="Ex. 40-A-01" class="w-full text-lg p-3 border-2 border-emerald-200 rounded-xl focus:border-emerald-500 focus:outline-none text-center font-mono uppercase font-bold" onkeypress="handleEnter(event, 2)">
-            <p id="pl-pma-preview" class="text-xs text-center text-emerald-700 font-bold mt-1.5 h-4"></p>
+            <input type="text" id="input-pl" oninput="previewPmaFromPl()" placeholder="Ex. 40-A-01" class="w-full text-lg p-2.5 border-2 border-emerald-200 rounded-xl focus:border-emerald-500 focus:outline-none text-center font-mono uppercase font-bold" onkeypress="handleEnter(event, 2)">
+            <p id="pl-pma-preview" class="text-xs text-center text-emerald-700 font-bold mt-1 h-4"></p>
           </div>
-          <button type="button" onclick="processPlanogramStep2()" class="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 shadow-lg btn-bounce">
+          <button type="button" onclick="processPlanogramStep2()" class="w-full py-2.5 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 shadow btn-bounce text-sm">
             ถัดไป <i class="fa-solid fa-arrow-right ml-1"></i>
           </button>
         </div>
       </div>
 
-      <!-- STEP 3: กรอกรายละเอียดสินค้า (รองรับทั้งโหมด Auto-Fill เติมแค่จำนวน+วันที่ และโหมดสินค้าใหม่) -->
+      <!-- STEP 3: รายละเอียดสินค้า (แสดงเฉพาะ ✓ พบรหัสสินค้า เมื่อเจอข้อมูลเดิม) -->
       <div id="inbound-step-3" class="hidden bg-white p-5 rounded-2xl shadow-md border-t-4 border-emerald-500">
         <div class="flex justify-between items-center mb-3">
-          <h2 class="text-lg font-bold text-emerald-800" id="step3-heading">บันทึกข้อมูลสินค้า</h2>
-          <span id="autofill-badge" class="hidden text-[11px] bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-bold">
-            <i class="fa-solid fa-bolt text-amber-500 mr-1"></i>ดึงข้อมูลเดิมอัตโนมัติ
+          <h2 class="text-base font-bold text-emerald-800">รายละเอียดสินค้า</h2>
+          <span id="autofill-badge" class="hidden text-xs bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-bold">
+            <i class="fa-solid fa-check text-emerald-600 mr-1"></i>พบรหัสสินค้า
           </span>
         </div>
 
-        <!-- กล่องแจ้งเตือนเมื่อพบสินค้าเดิมในระบบ (กรอกแค่ จำนวน + Mfg + Exp) -->
-        <div id="autofill-banner" class="hidden bg-emerald-50 border border-emerald-200 rounded-xl p-3 mb-4 text-xs text-emerald-800">
-          <div class="font-bold mb-0.5"><i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i>พบรหัสสินค้านี้ในฐานข้อมูลแล้ว!</div>
-          <p class="text-emerald-700">ระบบใส่ชื่อสินค้า ราคา และตำแหน่งชั้นวางให้แล้ว กรุณากรอกเฉพาะ <b>จำนวน, วันผลิต (Mfg) และวันหมดอายุ (Exp)</b> ด้านล่างได้เลยครับ</p>
-        </div>
-
         <form id="form-product" onsubmit="submitProduct(event)">
-          <!-- ข้อมูลอ้างอิงสินค้า -->
           <div class="grid grid-cols-2 gap-2.5 mb-2.5">
             <div>
-              <label class="text-[11px] text-gray-500 font-semibold">รหัสบาร์โค้ด (ID)</label>
+              <label class="text-[11px] text-gray-500 font-semibold">รหัสสินค้า (ID)</label>
               <input type="text" id="form-id" class="w-full bg-gray-100 border border-gray-200 p-2 rounded-lg text-xs font-mono font-bold" readonly>
             </div>
             <div>
-              <label class="text-[11px] text-gray-500 font-semibold">ตำแหน่งชั้นวาง (PL)</label>
+              <label class="text-[11px] text-gray-500 font-semibold">Planogram (PL)</label>
               <input type="text" id="form-pl" class="w-full bg-gray-100 border border-gray-200 p-2 rounded-lg text-xs font-mono font-bold" readonly>
             </div>
           </div>
 
           <div class="mb-3">
-            <label class="text-[11px] text-gray-500 font-semibold">หมวดหมู่ (PMA Category)</label>
+            <label class="text-[11px] text-gray-500 font-semibold">หมวดหมู่ (PMA)</label>
             <input type="text" id="form-pma" class="w-full bg-emerald-50 border border-emerald-200 p-2 rounded-lg text-xs font-bold text-emerald-800" readonly>
           </div>
 
-          <!-- ส่วนชื่อสินค้าและราคา (จะถูกล็อกให้อ่านอย่างเดียวเมื่อ Auto-fill เพื่อความรวดเร็ว แต่กดปลดล็อกแก้ได้) -->
-          <div id="master-detail-fields" class="space-y-2.5 mb-4 p-3 rounded-xl bg-gray-50 border border-gray-200">
-            <div class="flex justify-between items-center">
-              <span class="text-[11px] font-bold text-gray-500 uppercase">ข้อมูลหลักสินค้า</span>
-              <button type="button" id="btn-unlock-master" onclick="unlockMasterFields()" class="hidden text-[11px] text-emerald-600 hover:underline font-bold">
-                <i class="fa-solid fa-pen mr-0.5"></i> แก้ไขชื่อ/ราคา
-              </button>
-            </div>
-            <div>
+          <div id="master-detail-fields" class="grid grid-cols-3 gap-2.5 mb-3">
+            <div class="col-span-2">
               <label class="block text-xs font-bold text-gray-700 mb-1">ชื่อสินค้า</label>
-              <input type="text" id="form-name" required class="w-full border border-gray-300 p-2 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white">
+              <input type="text" id="form-name" required class="w-full border border-gray-300 p-2 rounded-lg text-sm focus:border-emerald-500 focus:outline-none bg-white">
             </div>
             <div>
-              <label class="block text-xs font-bold text-gray-700 mb-1">ราคาขาย (บาท)</label>
-              <input type="number" id="form-price" required step="0.25" min="0" class="w-full border border-gray-300 p-2 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white">
+              <label class="block text-xs font-bold text-gray-700 mb-1">ราคา</label>
+              <input type="number" id="form-price" required step="0.25" min="0" class="w-full border border-gray-300 p-2 rounded-lg text-sm focus:border-emerald-500 focus:outline-none bg-white">
             </div>
           </div>
 
-          <!-- ส่วนที่พนักงานต้องกรอกทุกครั้ง (จำนวน + Mfg + Exp) -->
-          <div class="p-3.5 rounded-xl bg-emerald-50/70 border-2 border-emerald-300 mb-5 space-y-3">
+          <div class="p-3 rounded-xl bg-emerald-50/60 border border-emerald-200 mb-4 space-y-2.5">
             <div>
-              <label class="block text-xs font-bold text-emerald-900 mb-1"><i class="fa-solid fa-cubes mr-1"></i>จำนวนที่รับเข้า (ชิ้น)</label>
-              <input type="number" id="form-qty" required min="1" placeholder="ระบุจำนวนสินค้า" class="w-full border-2 border-emerald-300 p-2.5 rounded-xl text-base font-bold text-center focus:border-emerald-600 focus:outline-none bg-white">
+              <label class="block text-xs font-bold text-emerald-900 mb-1">จำนวน</label>
+              <input type="number" id="form-qty" required min="1" class="w-full border border-emerald-300 p-2 rounded-lg text-base font-bold text-center focus:border-emerald-600 focus:outline-none bg-white">
             </div>
             <div class="grid grid-cols-2 gap-2.5">
               <div>
                 <label class="block text-xs font-bold text-gray-700 mb-1">วันผลิต (Mfg)</label>
-                <input type="date" id="form-mfg" required class="w-full border border-gray-300 p-2 rounded-xl text-xs sm:text-sm bg-white">
+                <input type="date" id="form-mfg" required class="w-full border border-gray-300 p-2 rounded-lg text-xs bg-white">
               </div>
               <div>
                 <label class="block text-xs font-bold text-red-600 mb-1">วันหมดอายุ (Exp)</label>
-                <input type="date" id="form-exp" required class="w-full border-2 border-red-300 p-2 rounded-xl text-xs sm:text-sm text-red-600 font-bold bg-white">
+                <input type="date" id="form-exp" required class="w-full border border-red-300 p-2 rounded-lg text-xs text-red-600 font-bold bg-white">
               </div>
             </div>
           </div>
 
           <div class="flex gap-2.5">
-            <button type="button" onclick="resetInbound()" class="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-300">ยกเลิก</button>
-            <button type="submit" class="flex-[2] py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm shadow-lg hover:bg-emerald-700 btn-bounce">
-              <i class="fa-solid fa-floppy-disk mr-1"></i> บันทึกรับสินค้าเข้า
+            <button type="button" onclick="resetInbound()" class="flex-1 py-2.5 bg-gray-200 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-300">ยกเลิก</button>
+            <button type="submit" class="flex-[2] py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm shadow hover:bg-emerald-700 btn-bounce">
+              บันทึก
             </button>
           </div>
         </form>
@@ -415,47 +365,46 @@
          PAGE 4: ประวัติการจัดการสินค้า (Managed History)
          --------------------------------------------------------- -->
     <div id="page-history" class="hidden fade-in max-w-2xl mx-auto pb-24">
-      <div class="bg-white p-4 rounded-2xl shadow-sm border border-yellow-200 mb-3">
-        <h2 class="text-base sm:text-lg font-bold text-gray-800 border-l-4 border-yellow-400 pl-2.5">
-          บันทึกการจัดการสินค้า (Managed History)
+      <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-yellow-200 mb-3">
+        <h2 class="text-base font-bold text-gray-800 border-l-4 border-yellow-400 pl-2.5">
+          ประวัติการจัดการ (History)
         </h2>
-        <p class="text-xs text-gray-500 mt-0.5 pl-3.5">รายการสินค้าที่พนักงานตรวจสอบและกดจัดการเรียบร้อยแล้ว</p>
       </div>
-      <div id="history-list" class="space-y-2.5"></div>
+      <div id="history-list" class="space-y-2"></div>
     </div>
 
   </main>
 
   <!-- =========================================================
-       📦 MODAL 1: รายละเอียดสินค้า + สิทธิ์แก้ไขเชิงลึกสำหรับ Admin
+       📦 MODAL 1: รายละเอียดสินค้า + การแก้ไขสำหรับ Admin
        ========================================================= -->
   <div id="modal-product" class="fixed inset-0 bg-black/60 z-modal-top hidden flex justify-center items-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 relative fade-in z-modal-top max-h-[90vh] overflow-y-auto">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5 relative fade-in z-modal-top max-h-[90vh] overflow-y-auto">
       <button onclick="closeModal('modal-product')" class="absolute top-3.5 right-3.5 text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times text-xl"></i></button>
       
-      <!-- View Mode -->
+      <!-- โหมดแสดงข้อมูล -->
       <div id="product-view-mode">
-        <div class="text-center mb-4">
-          <div class="w-14 h-14 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-2 text-emerald-600"><i class="fa-solid fa-box-open text-2xl"></i></div>
-          <h3 id="modal-name" class="text-lg font-bold text-gray-800"></h3>
+        <div class="text-center mb-3">
+          <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-2 text-emerald-600"><i class="fa-solid fa-box-open text-xl"></i></div>
+          <h3 id="modal-name" class="text-base font-bold text-gray-800"></h3>
           <p id="modal-category" class="text-xs text-emerald-600 font-bold mt-0.5"></p>
         </div>
-        <div class="space-y-2 text-sm mb-5 bg-gray-50 p-3.5 rounded-xl border border-gray-100">
-          <div class="flex justify-between border-b pb-1.5"><span class="text-gray-500">บาร์โค้ด (ID):</span> <span id="modal-id" class="font-mono font-bold text-gray-700"></span></div>
-          <div class="flex justify-between border-b pb-1.5"><span class="text-gray-500">ตำแหน่งชั้นวาง:</span> <span id="modal-pl-display" class="font-mono font-bold text-emerald-600"></span></div>
-          <div class="flex justify-between border-b pb-1.5"><span class="text-gray-500">ราคา:</span> <span id="modal-price" class="font-bold"></span></div>
-          <div class="flex justify-between border-b pb-1.5"><span class="text-gray-500">จำนวนคงเหลือ:</span> <span id="modal-inventory" class="font-bold text-emerald-600 text-base"></span></div>
-          <div class="flex justify-between border-b pb-1.5"><span class="text-gray-500">วันผลิต (Mfg):</span> <span id="modal-mfg" class="text-gray-600"></span></div>
-          <div class="flex justify-between border-b pb-1.5"><span class="text-gray-500">วันหมดอายุ (Exp):</span> <span id="modal-exp" class="text-red-600 font-bold"></span></div>
-          <div class="flex justify-between pt-0.5 text-xs"><span class="text-gray-400">ผู้บันทึกเข้า:</span> <span id="modal-created-by" class="font-mono text-gray-500"></span></div>
+        <div class="space-y-1.5 text-xs sm:text-sm mb-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
+          <div class="flex justify-between border-b pb-1"><span class="text-gray-500">ID:</span> <span id="modal-id" class="font-mono font-bold text-gray-700"></span></div>
+          <div class="flex justify-between border-b pb-1"><span class="text-gray-500">Planogram:</span> <span id="modal-pl-display" class="font-mono font-bold text-emerald-600"></span></div>
+          <div class="flex justify-between border-b pb-1"><span class="text-gray-500">ราคา:</span> <span id="modal-price" class="font-bold"></span></div>
+          <div class="flex justify-between border-b pb-1"><span class="text-gray-500">จำนวนคงเหลือ:</span> <span id="modal-inventory" class="font-bold text-emerald-600"></span></div>
+          <div class="flex justify-between border-b pb-1"><span class="text-gray-500">วันผลิต (Mfg):</span> <span id="modal-mfg" class="text-gray-600"></span></div>
+          <div class="flex justify-between border-b pb-1"><span class="text-gray-500">วันหมดอายุ (Exp):</span> <span id="modal-exp" class="text-red-600 font-bold"></span></div>
+          <div class="flex justify-between pt-0.5 text-[11px]"><span class="text-gray-400">ผู้บันทึก:</span> <span id="modal-created-by" class="font-mono text-gray-500"></span></div>
         </div>
 
         <button id="btn-mark-detail" class="w-full py-2.5 bg-emerald-600 text-white rounded-xl shadow hover:bg-emerald-700 transition font-bold text-sm mb-2"></button>
 
-        <!-- แผงควบคุมพิเศษสำหรับบัญชี admin@store เท่านั้น -->
-        <div id="admin-action-panel" class="hidden pt-2 border-t border-dashed border-amber-300 mt-2 grid grid-cols-2 gap-2">
+        <!-- แผงควบคุมสำหรับ admin@store -->
+        <div id="admin-action-panel" class="hidden pt-2 border-t border-gray-200 mt-2 grid grid-cols-2 gap-2">
           <button type="button" onclick="openAdminEditForm()" class="py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow flex items-center justify-center gap-1">
-            <i class="fa-solid fa-pen-to-square"></i> แก้ไขเชิงลึก (Admin)
+            <i class="fa-solid fa-pen-to-square"></i> แก้ไขข้อมูล
           </button>
           <button type="button" onclick="deleteProductAdmin()" class="py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1">
             <i class="fa-solid fa-trash-can"></i> ลบรายการ
@@ -463,10 +412,10 @@
         </div>
       </div>
 
-      <!-- Admin Deep Edit Form Mode -->
+      <!-- โหมดแก้ไขข้อมูลสำหรับ Admin -->
       <form id="product-admin-edit-form" onsubmit="saveAdminProductEdit(event)" class="hidden space-y-2.5 text-left">
-        <div class="flex items-center gap-2 text-amber-700 font-bold text-sm border-b pb-2 mb-2">
-          <i class="fa-solid fa-crown text-amber-500"></i> แก้ไขข้อมูลเชิงลึก (Admin Mode)
+        <div class="flex items-center gap-1.5 text-amber-700 font-bold text-sm border-b pb-2 mb-2">
+          <i class="fa-solid fa-pen-to-square text-amber-500"></i> แก้ไขข้อมูลสินค้า
         </div>
         <div>
           <label class="text-[11px] font-bold text-gray-600">ชื่อสินค้า</label>
@@ -484,18 +433,18 @@
           <div>
             <label class="text-[11px] font-bold text-gray-600">สถานะ</label>
             <select id="edit-status" class="w-full border p-2 rounded-lg text-xs font-bold bg-white">
-              <option value="Pending">Pending (รอจัดการ)</option>
-              <option value="Managed">Managed (จัดการแล้ว)</option>
+              <option value="Pending">Pending</option>
+              <option value="Managed">Managed</option>
             </select>
           </div>
         </div>
         <div class="grid grid-cols-2 gap-2">
           <div>
-            <label class="text-[11px] font-bold text-gray-600">ราคา (บาท)</label>
+            <label class="text-[11px] font-bold text-gray-600">ราคา</label>
             <input type="number" step="0.25" id="edit-price" required class="w-full border p-2 rounded-lg text-sm">
           </div>
           <div>
-            <label class="text-[11px] font-bold text-gray-600">จำนวนคงเหลือ</label>
+            <label class="text-[11px] font-bold text-gray-600">จำนวน</label>
             <input type="number" id="edit-qty" required class="w-full border p-2 rounded-lg text-sm">
           </div>
         </div>
@@ -511,44 +460,44 @@
         </div>
         <div class="flex gap-2 pt-2">
           <button type="button" onclick="cancelAdminEdit()" class="flex-1 py-2 bg-gray-200 text-gray-700 rounded-xl text-xs font-bold">ยกเลิก</button>
-          <button type="submit" class="flex-1 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow">บันทึกการแก้ไข</button>
+          <button type="submit" class="flex-1 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow">บันทึก</button>
         </div>
       </form>
     </div>
   </div>
 
   <!-- =========================================================
-       📅 MODAL 2: สินค้าหมดอายุเดือนหน้า (จัดกลุ่มตาม PMA)
+       📅 MODAL 2: สินค้าหมดอายุเดือนหน้า
        ========================================================= -->
   <div id="modal-calendar" class="fixed inset-0 bg-black/60 z-modal-lower hidden flex justify-center items-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-0 overflow-hidden fade-in max-h-[85vh] flex flex-col">
-      <div class="bg-emerald-600 text-white p-4 flex justify-between items-center">
-        <h3 class="font-bold text-base"><i class="fa-regular fa-calendar-days mr-1.5"></i>สินค้าหมดอายุเดือนหน้า</h3>
+      <div class="bg-emerald-600 text-white p-3.5 flex justify-between items-center">
+        <h3 class="font-bold text-sm"><i class="fa-regular fa-calendar-days mr-1.5"></i>รายการหมดอายุเดือนหน้า</h3>
         <button onclick="closeModal('modal-calendar')"><i class="fa-solid fa-times text-lg"></i></button>
       </div>
       <div class="p-0 overflow-y-auto flex-1 bg-white">
         <table class="w-full text-sm text-left border-collapse">
           <tbody id="calendar-list"></tbody>
         </table>
-        <div id="calendar-empty" class="hidden text-center py-12 text-gray-400">
-          <i class="fa-regular fa-face-smile text-3xl mb-2"></i><br>ไม่มีรายการสินค้าหมดอายุเดือนหน้า
+        <div id="calendar-empty" class="hidden text-center py-12 text-gray-400 text-sm">
+          ไม่มีรายการสินค้าหมดอายุเดือนหน้า
         </div>
       </div>
     </div>
   </div>
 
   <!-- =========================================================
-       🔔 MODAL 3: สินค้าที่จะหมดอายุวันพรุ่งนี้
+       🔔 MODAL 3: สินค้าหมดอายุวันพรุ่งนี้
        ========================================================= -->
   <div id="modal-tomorrow" class="fixed inset-0 bg-black/60 z-modal-lower hidden flex justify-center items-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-0 overflow-hidden fade-in relative">
-      <div class="bg-red-500 text-white p-4 text-center">
-        <h3 class="font-bold text-base"><i class="fa-regular fa-bell animate-pulse mr-1.5"></i>จะหมดอายุวันพรุ่งนี้!</h3>
+      <div class="bg-red-500 text-white p-3.5 text-center">
+        <h3 class="font-bold text-sm"><i class="fa-regular fa-bell mr-1.5"></i>แจ้งเตือนสินค้าหมดอายุพรุ่งนี้</h3>
       </div>
-      <div id="tomorrow-content" class="p-6 text-center"></div>
-      <div class="px-6 pb-4">
+      <div id="tomorrow-content" class="p-5 text-center"></div>
+      <div class="px-5 pb-4">
         <button id="btn-mark-tomorrow" class="w-full py-2.5 bg-yellow-400 text-yellow-900 rounded-xl shadow hover:bg-yellow-500 transition font-bold text-sm">
-          <i class="fa-solid fa-check-circle mr-1"></i> จัดการสินค้าเรียบร้อย
+          <i class="fa-solid fa-check mr-1"></i> ยืนยันการจัดการ
         </button>
       </div>
       <div class="bg-gray-50 p-3 flex justify-between items-center border-t text-xs">
@@ -561,11 +510,11 @@
   </div>
 
   <!-- =========================================================
-       ⚡ JAVASCRIPT APPLICATION LOGIC (V5.0)
+       ⚡ JAVASCRIPT APPLICATION LOGIC (V5.1 Clean Edition)
        ========================================================= -->
   <script>
-    // --- Global State ---
-    let currentUser = null; // { email: 'test@store' | 'admin@store', role: 'staff' | 'admin', title: '...' }
+    // --- ตัวแปรสถานะหลักของระบบ ---
+    let currentUser = null;
     let currentPinBuffer = '';
     let allPmaCategories = [];
     let showActivePmaOnly = false;
@@ -579,9 +528,8 @@
     let currentTomorrowIndex = 0;
     let currentHealthInfo = { connected: false, error: null };
 
-    // --- Bootstrapping ---
+    // --- เริ่มต้นระบบและตรวจสอบสิทธิ์ล็อกอิน ---
     window.onload = function() {
-      // ตรวจสอบ Session การล็อกอิน (ถ้ายังไม่ล็อกอินในแท็บนี้ ให้แสดงหน้าต่าง PIN เสมอ)
       const savedSession = sessionStorage.getItem('qa_store_user');
       if (savedSession) {
         currentUser = JSON.parse(savedSession);
@@ -590,7 +538,6 @@
         document.getElementById('pin-lock-modal').classList.remove('hidden');
       }
 
-      // รองรับการพิมพ์รหัส PIN 000000 ผ่านคีย์บอร์ดคอมพิวเตอร์
       document.addEventListener('keydown', (e) => {
         if (!document.getElementById('pin-lock-modal').classList.contains('hidden')) {
           if (e.key >= '0' && e.key <= '9') pressPin(e.key);
@@ -601,7 +548,7 @@
     };
 
     // =========================================================
-    // 1. PIN AUTHENTICATION & ROLE MANAGEMENT
+    // 1. ระบบยืนยันตัวตนด้วย PIN (PIN Authentication)
     // =========================================================
     function selectLoginAccount(email) {
       document.getElementById('login-email').value = email;
@@ -636,10 +583,7 @@
       document.getElementById('pin-error-msg').innerText = '';
       currentPinBuffer += digit;
       updatePinDots();
-
-      if (currentPinBuffer.length === 6) {
-        submitPinLogin();
-      }
+      if (currentPinBuffer.length === 6) submitPinLogin();
     }
 
     function backspacePin() {
@@ -670,10 +614,10 @@
         } else {
           document.getElementById('pin-error-msg').innerText = data.message || 'รหัส PIN ไม่ถูกต้อง';
           currentPinBuffer = '';
-          setTimeout(updatePinDots, 250);
+          setTimeout(updatePinDots, 200);
         }
       } catch (err) {
-        document.getElementById('pin-error-msg').innerText = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้';
+        document.getElementById('pin-error-msg').innerText = 'ข้อผิดพลาดการเชื่อมต่อ';
         clearPin();
       }
     }
@@ -683,7 +627,7 @@
       const roleBadge = document.getElementById('user-role-badge');
       if (currentUser.role === 'admin') {
         roleBadge.innerHTML = `<i class="fa-solid fa-crown text-amber-300 mr-1"></i>${currentUser.email}`;
-        roleBadge.className = 'text-[10px] bg-amber-600 text-white px-2 py-0.5 rounded-full font-mono font-bold shadow-sm';
+        roleBadge.className = 'text-[10px] bg-amber-600 text-white px-2 py-0.5 rounded-full font-mono font-bold';
       } else {
         roleBadge.innerHTML = `<i class="fa-solid fa-user mr-1"></i>${currentUser.email}`;
         roleBadge.className = 'text-[10px] bg-emerald-800 text-emerald-100 px-2 py-0.5 rounded-full font-mono';
@@ -704,18 +648,16 @@
     }
 
     // =========================================================
-    // 2. UNIFIED MENUBAR & NAVIGATION
+    // 2. การสลับแท็บเมนูหลัก (Unified Menubar Navigation)
     // =========================================================
     function switchTab(tabName) {
       stopLiveCamera(1);
       stopLiveCamera(2);
 
-      // ซ่อนทุกหน้า
       ['page-categories', 'page-items', 'page-inbound', 'page-history'].forEach(id => {
         document.getElementById(id).classList.add('hidden');
       });
 
-      // รีเซ็ตสไตล์ปุ่ม Menubar ทั้ง 3 ปุ่มให้เป็นมาตรฐานเดียวกัน
       const activeClass = 'py-2 px-2 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition bg-white text-emerald-700 shadow';
       const inactiveClass = 'py-2 px-2 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition text-emerald-100 hover:bg-emerald-600/60';
 
@@ -740,7 +682,7 @@
     function getItemKey(item) { return item._id || item.id; }
 
     // =========================================================
-    // 3. HEALTH CHECK & PMA DIRECTORY (92 หมวดหมู่ตามอ้างอิง)
+    // 3. ตรวจสอบสถานะฐานข้อมูล และแสดงรายการ PMA ทั้ง 92 หมวดหมู่
     // =========================================================
     async function checkHealthStatus() {
       try {
@@ -751,10 +693,10 @@
         const text = document.getElementById('db-status-text');
         if (data.connected) {
           dot.className = 'w-2 h-2 rounded-full bg-green-300';
-          text.innerText = 'Cloud DB Online';
+          text.innerText = 'ออนไลน์';
         } else {
           dot.className = 'w-2 h-2 rounded-full bg-red-400 animate-ping';
-          text.innerText = 'DB Error (คลิกดูสาเหตุ)';
+          text.innerText = 'ขัดข้อง';
         }
       } catch (e) {}
     }
@@ -762,9 +704,9 @@
     function showDbStatusDetail(e) {
       e.stopPropagation();
       if (currentHealthInfo.connected) {
-        Swal.fire({ icon: 'success', title: 'ฐานข้อมูลพร้อมใช้งาน', text: `วันที่ระบบไทย: ${currentHealthInfo.thaiDate}`, confirmButtonColor: '#10b981' });
+        Swal.fire({ icon: 'info', title: 'สถานะระบบปกติ', text: `วันที่ระบบ: ${currentHealthInfo.thaiDate}`, confirmButtonColor: '#10b981' });
       } else {
-        Swal.fire({ icon: 'error', title: 'ฐานข้อมูลขัดข้อง', text: currentHealthInfo.error || 'กรุณาตรวจสอบ MONGODB_URI', confirmButtonColor: '#10b981' });
+        Swal.fire({ icon: 'error', title: 'การเชื่อมต่อขัดข้อง', text: currentHealthInfo.error || 'ตรวจสอบการตั้งค่าฐานข้อมูล', confirmButtonColor: '#10b981' });
       }
     }
 
@@ -786,10 +728,10 @@
       const btn = document.getElementById('btn-filter-active-pma');
       const label = document.getElementById('filter-pma-label');
       if (showActivePmaOnly) {
-        btn.className = 'px-3 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow transition whitespace-nowrap';
+        btn.className = 'px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow transition whitespace-nowrap';
         label.innerText = 'เฉพาะที่มีสินค้า';
       } else {
-        btn.className = 'px-3 py-2 rounded-xl text-xs font-bold border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition whitespace-nowrap';
+        btn.className = 'px-3 py-1.5 rounded-xl text-xs font-bold border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition whitespace-nowrap';
         label.innerText = 'แสดงทั้งหมด';
       }
       filterPmaList();
@@ -812,7 +754,7 @@
       container.innerHTML = '';
 
       if (list.length === 0) {
-        container.innerHTML = `<div class="col-span-2 text-center py-10 text-gray-400 bg-white rounded-2xl">ไม่พบหมวดหมู่ PMA ที่ค้นหา</div>`;
+        container.innerHTML = `<div class="col-span-2 text-center py-10 text-gray-400 bg-white rounded-2xl text-sm">ไม่พบหมวดหมู่ที่ค้นหา</div>`;
         return;
       }
 
@@ -830,19 +772,19 @@
 
         card.innerHTML = `
           <div class="flex items-center gap-3 min-w-0">
-            <div class="w-10 h-10 rounded-xl flex items-center justify-center font-mono font-bold text-sm shrink-0 ${
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center font-mono font-bold text-xs shrink-0 ${
               hasStock ? 'bg-emerald-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600'
             }">
               ${pma.code}
             </div>
             <div class="truncate">
               <div class="text-xs sm:text-sm font-bold text-gray-800 truncate">${pma.name}</div>
-              <div class="text-[11px] text-gray-400">PMA ${pma.code}</div>
+              <div class="text-[10px] text-gray-400">PMA ${pma.code}</div>
             </div>
           </div>
           <div class="flex items-center gap-2 shrink-0 ml-2">
             ${hasStock
-              ? `<span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-0.5 rounded-full">${pma.pendingCount} รายการ</span>`
+              ? `<span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded-full">${pma.pendingCount}</span>`
               : `<span class="text-[11px] text-gray-300">0</span>`
             }
             <i class="fa-solid fa-chevron-right text-gray-300 text-xs"></i>
@@ -853,7 +795,7 @@
     }
 
     // =========================================================
-    // 4. PRODUCT LIST & DETAIL + ADMIN DEEP EDIT
+    // 4. แสดงรายการสินค้าตามหมวดหมู่ และการจัดการข้อมูล
     // =========================================================
     async function loadProductsByPma(code, fullLabel) {
       try {
@@ -869,7 +811,7 @@
         renderProducts(prods);
       } catch (err) {
         showLoading(false);
-        Swal.fire('Error', 'โหลดรายการสินค้าไม่สำเร็จ', 'error');
+        Swal.fire('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลสินค้าได้', 'error');
       }
     }
 
@@ -877,12 +819,7 @@
       const c = document.getElementById('item-list');
       c.innerHTML = '';
       if (!Array.isArray(prods) || prods.length === 0) {
-        c.innerHTML = `
-          <div class="text-center text-gray-400 py-12 bg-white rounded-2xl border border-gray-100">
-            <i class="fa-solid fa-box-open text-3xl mb-2 text-gray-300"></i>
-            <p class="text-sm font-medium">ยังไม่มีสินค้าในหมวดหมู่ PMA นี้</p>
-            <button onclick="switchTab('inbound')" class="mt-3 px-4 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg shadow">+ รับสินค้าเข้าหมวดนี้</button>
-          </div>`;
+        c.innerHTML = `<div class="text-center text-gray-400 py-12 bg-white rounded-2xl border border-gray-100 text-sm">ไม่มีรายการสินค้าในหมวดหมู่นี้</div>`;
         return;
       }
 
@@ -891,17 +828,17 @@
         const isManaged = p.status === 'Managed';
         const isExp = p.expDate < todayStr;
         const icon = isManaged
-          ? '<i class="fa-solid fa-check-circle text-yellow-600 text-xl"></i>'
-          : (isExp ? '<span class="bg-red-500 text-white text-[11px] px-2 py-0.5 rounded font-bold">หมดอายุ</span>' : '<i class="fa-solid fa-circle-info text-emerald-500 text-xl"></i>');
+          ? '<i class="fa-solid fa-check-circle text-yellow-600 text-lg"></i>'
+          : (isExp ? '<span class="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded font-bold">Exp</span>' : '<i class="fa-solid fa-circle-info text-emerald-500 text-lg"></i>');
 
         const div = document.createElement('div');
-        div.className = `${isManaged ? 'managed-item' : 'bg-white border-gray-200'} p-4 rounded-xl shadow-sm border flex justify-between items-center cursor-pointer transition hover:shadow-md`;
+        div.className = `${isManaged ? 'managed-item' : 'bg-white border-gray-200'} p-3.5 rounded-xl shadow-sm border flex justify-between items-center cursor-pointer transition hover:shadow-md`;
         div.onclick = () => showProductDetail(p);
         div.innerHTML = `
           <div class="min-w-0 pr-2">
-            <h4 class="font-bold text-gray-800 text-sm truncate">${p.name} <span class="text-emerald-700 font-bold text-xs">(${p.inventory} ชิ้น)</span></h4>
+            <h4 class="font-bold text-gray-800 text-sm truncate">${p.name} <span class="text-emerald-700 font-bold text-xs">(${p.inventory})</span></h4>
             <div class="text-xs text-gray-500 mt-1 flex flex-wrap gap-1.5 items-center">
-              <span class="bg-gray-100 px-2 py-0.5 rounded font-medium">Exp: <b class="${isExp ? 'text-red-600' : 'text-gray-700'}">${p.expDate}</b></span>
+              <span class="bg-gray-100 px-2 py-0.5 rounded">Exp: <b class="${isExp ? 'text-red-600' : 'text-gray-700'}">${p.expDate}</b></span>
               <span class="text-emerald-700 font-mono bg-emerald-50 px-1.5 py-0.5 rounded">PL: ${p.pl || '-'}</span>
               ${isManaged ? '<span class="text-yellow-800 bg-yellow-200 px-1.5 py-0.5 rounded font-bold">Managed</span>' : ''}
             </div>
@@ -925,21 +862,20 @@
       document.getElementById('modal-inventory').innerText = `${p.inventory} ชิ้น`;
       document.getElementById('modal-mfg').innerText = p.mfgDate || '-';
       document.getElementById('modal-exp').innerText = p.expDate;
-      document.getElementById('modal-created-by').innerText = p.createdBy || 'system';
+      document.getElementById('modal-created-by').innerText = p.createdBy || '-';
 
       const btnMark = document.getElementById('btn-mark-detail');
       if (p.status === 'Managed') {
-        btnMark.innerHTML = `<i class="fa-solid fa-check-double mr-1"></i> จัดการแล้ว (${p.managedBy || 'Staff'})`;
+        btnMark.innerHTML = `<i class="fa-solid fa-check-double mr-1"></i> ตรวจสอบแล้ว (${p.managedBy || 'Staff'})`;
         btnMark.className = 'w-full py-2.5 bg-gray-200 text-gray-500 rounded-xl cursor-not-allowed font-bold text-sm mb-2';
         btnMark.disabled = true;
       } else {
-        btnMark.innerHTML = '<i class="fa-solid fa-check mr-1"></i> Mark as Managed (ยืนยันจัดการ)';
+        btnMark.innerHTML = '<i class="fa-solid fa-check mr-1"></i> ยืนยันการจัดการ';
         btnMark.className = 'w-full py-2.5 bg-emerald-600 text-white rounded-xl shadow hover:bg-emerald-700 transition font-bold text-sm mb-2';
         btnMark.disabled = false;
         btnMark.onclick = () => executeMark(getItemKey(p), 'modal-product');
       }
 
-      // แสดงแผงแก้ไขเชิงลึกเฉพาะบัญชี admin@store
       const adminPanel = document.getElementById('admin-action-panel');
       if (currentUser && currentUser.role === 'admin') {
         adminPanel.classList.remove('hidden');
@@ -1000,28 +936,28 @@
 
         if (data.success) {
           closeModal('modal-product');
-          Swal.fire({ icon: 'success', title: 'อัปเดตข้อมูลเชิงลึกสำเร็จ!', timer: 1200, showConfirmButton: false });
+          Swal.fire({ icon: 'success', title: 'อัปเดตข้อมูลแล้ว', timer: 1000, showConfirmButton: false });
           if (!document.getElementById('page-items').classList.contains('hidden')) {
             loadProductsByPma(currentSelectedPmaCode, document.getElementById('current-category-title').innerText);
           }
           checkBellStatus();
         } else {
-          Swal.fire('Error', data.message, 'error');
+          Swal.fire('ข้อผิดพลาด', data.message, 'error');
         }
       } catch (err) {
-        Swal.fire('Error', 'ไม่สามารถบันทึกการแก้ไขได้', 'error');
+        Swal.fire('ข้อผิดพลาด', 'ไม่สามารถบันทึกการแก้ไขได้', 'error');
       }
     }
 
     function deleteProductAdmin() {
       if (!currentSelectedProduct?._id || currentUser?.role !== 'admin') return;
       Swal.fire({
-        title: 'ยืนยันลบรายการสินค้านี้?',
-        text: `${currentSelectedProduct.name} จะถูกลบออกจากฐานข้อมูลถาวร`,
+        title: 'ยืนยันการลบข้อมูล',
+        text: currentSelectedProduct.name,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#ef4444',
-        confirmButtonText: 'ลบทิ้งเลย',
+        confirmButtonText: 'ลบข้อมูล',
         cancelButtonText: 'ยกเลิก'
       }).then(async (result) => {
         if (result.isConfirmed) {
@@ -1032,7 +968,7 @@
           const data = await res.json();
           if (data.success) {
             closeModal('modal-product');
-            Swal.fire({ icon: 'success', title: 'ลบสินค้าเรียบร้อย', timer: 1100, showConfirmButton: false });
+            Swal.fire({ icon: 'success', title: 'ลบข้อมูลแล้ว', timer: 1000, showConfirmButton: false });
             if (!document.getElementById('page-items').classList.contains('hidden')) {
               loadProductsByPma(currentSelectedPmaCode, document.getElementById('current-category-title').innerText);
             }
@@ -1044,13 +980,13 @@
 
     function executeMark(identifier, closeModalId) {
       Swal.fire({
-        title: 'ยืนยันการจัดการสินค้า?',
-        text: `บันทึกโดย ${currentUser?.email || 'Staff'}`,
+        title: 'ยืนยันการจัดการ',
+        text: `ผู้ตรวจสอบ: ${currentUser?.email || 'Staff'}`,
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#10b981',
         cancelButtonColor: '#d33',
-        confirmButtonText: 'ยืนยัน (Yes)',
+        confirmButtonText: 'ยืนยัน',
         cancelButtonText: 'ยกเลิก'
       }).then(async (result) => {
         if (result.isConfirmed) {
@@ -1066,7 +1002,7 @@
             showLoading(false);
 
             if (data.success) {
-              Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ!', timer: 1100, showConfirmButton: false });
+              Swal.fire({ icon: 'success', title: 'ตรวจสอบแล้ว', timer: 1000, showConfirmButton: false });
               if (!document.getElementById('modal-calendar').classList.contains('hidden')) checkNextMonth();
               if (!document.getElementById('page-items').classList.contains('hidden')) {
                 loadProductsByPma(currentSelectedPmaCode, document.getElementById('current-category-title').innerText);
@@ -1081,7 +1017,7 @@
     }
 
     // =========================================================
-    // 5. SMART INBOUND SYSTEM + LIVE CAMERA VIEWFINDER
+    // 5. ระบบรับสินค้าเข้า (Smart Inbound & Live Viewfinder)
     // =========================================================
     function resetInbound() {
       stopLiveCamera(1);
@@ -1113,7 +1049,6 @@
       }
     }
 
-    // เปิดกล้องแสดงภาพสด (Live Viewfinder) พร้อมขอสิทธิ์จากเบราว์เซอร์โดยตรง
     async function startLiveCamera(step) {
       const placeholder = document.getElementById(`camera-placeholder-${step}`);
       const wrapper = document.getElementById(`reader-wrapper-${step}`);
@@ -1136,14 +1071,14 @@
             if (step === 1) processBarcodeStep1();
             else processPlanogramStep2();
           },
-          () => {} // ข้ามเฟรมที่ยังไม่พบบาร์โค้ด
+          () => {}
         );
       } catch (err) {
         stopLiveCamera(step);
         Swal.fire({
           icon: 'warning',
           title: 'ไม่สามารถเปิดกล้องได้',
-          html: '<p class="text-xs text-gray-600">กรุณากด <b>อนุญาต (Allow)</b> การเข้าถึงกล้องบนเบราว์เซอร์ และตรวจสอบว่าเปิดเว็บผ่านลิงก์ <b>HTTPS</b> (เช่น Render) แล้ว</p>',
+          text: 'กรุณาอนุญาตการเข้าถึงกล้องบนเบราว์เซอร์',
           confirmButtonColor: '#10b981'
         });
       }
@@ -1169,11 +1104,11 @@
       } catch (e) {}
     }
 
-    // ขั้นตอนที่ 1: ตรวจสอบบาร์โค้ด -> ถ้าเคยมีในระบบแล้วให้ข้ามไป Step 3 และเติมข้อมูลให้อัตโนมัติ!
+    // ตรวจสอบบาร์โค้ด: หากพบในระบบ แสดงเฉพาะป้าย "✓ พบรหัสสินค้า" และล็อกข้อมูลหลักไว้ให้กรอกเฉพาะ จำนวน + Mfg + Exp
     async function processBarcodeStep1() {
       const pid = document.getElementById('input-pid').value.trim();
       if (!pid) {
-        return Swal.fire('แจ้งเตือน', 'กรุณาสแกนหรือพิมพ์รหัสบาร์โค้ดสินค้าก่อนครับ', 'warning');
+        return Swal.fire('แจ้งเตือน', 'กรุณาระบุรหัสบาร์โค้ดสินค้า', 'warning');
       }
 
       inboundData.id = pid;
@@ -1186,7 +1121,6 @@
         showLoading(false);
 
         if (lookup.found && lookup.product) {
-          // ✨ เจอรหัสสินค้าที่เคยบันทึกไว้แล้ว! เติมรายละเอียดให้ครบและข้ามไปกรอกแค่ จำนวน + Mfg + Exp
           inboundData.isAutoFilled = true;
           inboundData.pl = lookup.product.pl || '-';
 
@@ -1194,16 +1128,13 @@
           document.getElementById('inbound-step-2').classList.add('hidden');
           document.getElementById('inbound-step-3').classList.remove('hidden');
 
-          // อัปเดตแถบ Stepper เต็มหลอดทันที
           document.getElementById('step-dot-2').className = 'w-7 h-7 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center font-bold';
           document.getElementById('step-line-1').style.width = '100%';
           document.getElementById('step-dot-3').className = 'w-7 h-7 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center font-bold shadow';
           document.getElementById('step-line-2').style.width = '100%';
 
-          // แสดงป้าย Auto-Fill และล็อกช่องชื่อกับราคาไว้ให้พร้อมกรอกจำนวนทันที
+          // แสดงเฉพาะป้าย ✓ พบรหัสสินค้า
           document.getElementById('autofill-badge').classList.remove('hidden');
-          document.getElementById('autofill-banner').classList.remove('hidden');
-          document.getElementById('btn-unlock-master').classList.remove('hidden');
 
           document.getElementById('form-id').value = lookup.product.id;
           document.getElementById('form-pl').value = lookup.product.pl;
@@ -1221,7 +1152,6 @@
           document.getElementById('form-mfg').value = new Date().toISOString().split('T')[0];
           setTimeout(() => document.getElementById('form-qty').focus(), 200);
         } else {
-          // สินค้าใหม่ -> ไปขั้นตอนที่ 2 สแกน Planogram
           inboundData.isAutoFilled = false;
           document.getElementById('inbound-step-1').classList.add('hidden');
           document.getElementById('inbound-step-2').classList.remove('hidden');
@@ -1231,7 +1161,7 @@
         }
       } catch (err) {
         showLoading(false);
-        Swal.fire('Error', 'เกิดข้อผิดพลาดในการตรวจสอบรหัสสินค้า', 'error');
+        Swal.fire('ข้อผิดพลาด', 'ไม่สามารถตรวจสอบรหัสสินค้าได้', 'error');
       }
     }
 
@@ -1241,7 +1171,7 @@
       const previewEl = document.getElementById('pl-pma-preview');
       if (match) {
         const found = allPmaCategories.find(p => p.code === match[1]);
-        previewEl.innerText = found ? `หมวดหมู่: ${found.fullLabel}` : `รหัส PMA: ${match[1]}`;
+        previewEl.innerText = found ? found.fullLabel : `PMA ${match[1]}`;
       } else {
         previewEl.innerText = '';
       }
@@ -1250,7 +1180,7 @@
     function processPlanogramStep2() {
       const pl = document.getElementById('input-pl').value.trim().toUpperCase();
       if (!pl || pl.length < 2) {
-        return Swal.fire('แจ้งเตือน', 'กรุณาระบุรหัส Planogram อย่างน้อย 2 ตัวอักษร (เช่น 40-A-01)', 'warning');
+        return Swal.fire('แจ้งเตือน', 'กรุณาระบุรหัส Planogram', 'warning');
       }
 
       inboundData.pl = pl;
@@ -1261,10 +1191,7 @@
       document.getElementById('step-dot-3').className = 'w-7 h-7 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center font-bold shadow';
       document.getElementById('step-line-2').style.width = '100%';
 
-      // ซ่อนโหมด Auto-Fill และเปิดให้กรอกชื่อกับราคาได้เต็มที่
       document.getElementById('autofill-badge').classList.add('hidden');
-      document.getElementById('autofill-banner').classList.add('hidden');
-      document.getElementById('btn-unlock-master').classList.add('hidden');
 
       const nameInput = document.getElementById('form-name');
       const priceInput = document.getElementById('form-price');
@@ -1282,16 +1209,6 @@
       document.getElementById('form-mfg').value = new Date().toISOString().split('T')[0];
 
       setTimeout(() => nameInput.focus(), 200);
-    }
-
-    function unlockMasterFields() {
-      const nameInput = document.getElementById('form-name');
-      const priceInput = document.getElementById('form-price');
-      nameInput.readOnly = false;
-      priceInput.readOnly = false;
-      nameInput.classList.remove('bg-gray-100', 'text-gray-600');
-      priceInput.classList.remove('bg-gray-100', 'text-gray-600');
-      nameInput.focus();
     }
 
     async function submitProduct(e) {
@@ -1318,19 +1235,19 @@
         const data = await res.json();
 
         if (data.success) {
-          Swal.fire({ icon: 'success', title: 'บันทึกรับสินค้าเข้าสำเร็จ!', timer: 1300, showConfirmButton: false });
+          Swal.fire({ icon: 'success', title: 'บันทึกข้อมูลแล้ว', timer: 1100, showConfirmButton: false });
           resetInbound();
           checkBellStatus();
         } else {
-          Swal.fire('Error', data.message || 'บันทึกไม่สำเร็จ', 'error');
+          Swal.fire('ข้อผิดพลาด', data.message || 'ไม่สามารถบันทึกได้', 'error');
         }
       } catch (err) {
-        Swal.fire('Error', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
+        Swal.fire('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
       }
     }
 
     // =========================================================
-    // 6. NOTIFICATIONS (NEXT MONTH & TOMORROW) + HISTORY + SEED
+    // 6. ระบบแจ้งเตือนวันหมดอายุ และประวัติการจัดการ
     // =========================================================
     async function checkNextMonth() {
       try {
@@ -1407,7 +1324,7 @@
         currentTomorrowIndex = 0;
 
         if (tomorrowItems.length === 0) {
-          Swal.fire('ยอดเยี่ยม!', 'ไม่มีรายการสินค้าที่หมดอายุวันพรุ่งนี้', 'success');
+          Swal.fire('ตรวจสอบแล้ว', 'ไม่มีรายการสินค้าหมดอายุวันพรุ่งนี้', 'success');
           return;
         }
         document.getElementById('modal-tomorrow').classList.remove('hidden');
@@ -1421,9 +1338,9 @@
       const i = tomorrowItems[currentTomorrowIndex];
       document.getElementById('tomorrow-content').innerHTML = `
         <div class="text-xs text-emerald-600 font-bold mb-1">${i.category} • PL: ${i.pl || '-'}</div>
-        <h2 class="text-xl font-bold text-gray-800 mb-1">${i.name}</h2>
+        <h2 class="text-lg font-bold text-gray-800 mb-1">${i.name}</h2>
         <div class="text-xs text-gray-400 font-mono mb-2">ID: ${i.id} • คงเหลือ ${i.inventory} ชิ้น</div>
-        <div class="text-red-600 font-bold text-lg">Exp: ${i.expDate}</div>
+        <div class="text-red-600 font-bold text-base">Exp: ${i.expDate}</div>
       `;
       document.getElementById('tomorrow-counter').innerText = `${currentTomorrowIndex + 1} / ${tomorrowItems.length}`;
       document.getElementById('btn-prev').disabled = currentTomorrowIndex === 0;
@@ -1448,52 +1365,23 @@
         const c = document.getElementById('history-list');
         c.innerHTML = '';
         if (!Array.isArray(items) || items.length === 0) {
-          c.innerHTML = '<div class="text-center text-gray-400 py-12 bg-white rounded-2xl">ยังไม่มีประวัติการจัดการสินค้า</div>';
+          c.innerHTML = '<div class="text-center text-gray-400 py-12 bg-white rounded-2xl text-sm">ไม่มีประวัติการจัดการ</div>';
           return;
         }
         items.forEach(p => {
           c.innerHTML += `
-            <div class="bg-yellow-50 border border-yellow-200 p-4 rounded-xl flex justify-between items-center shadow-sm">
+            <div class="bg-yellow-50 border border-yellow-200 p-3.5 rounded-xl flex justify-between items-center shadow-sm">
               <div>
                 <h4 class="font-bold text-gray-800 text-sm">${p.name}</h4>
                 <div class="text-[11px] text-emerald-700 font-semibold">${p.category}</div>
-                <div class="text-[11px] text-gray-500 mt-1">จัดการเมื่อ: ${p.actionDate || '-'} • โดย: <b>${p.managedBy || 'Staff'}</b></div>
+                <div class="text-[11px] text-gray-500 mt-0.5">วันที่: ${p.actionDate || '-'} • ผู้ตรวจสอบ: <b>${p.managedBy || 'Staff'}</b></div>
               </div>
-              <div class="bg-yellow-200 text-yellow-800 px-2.5 py-1 rounded-lg text-xs font-bold">Managed</div>
+              <div class="bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded text-xs font-bold">Managed</div>
             </div>`;
         });
       } catch (err) {
         showLoading(false);
       }
-    }
-
-    function seedDemoData() {
-      Swal.fire({
-        title: 'สร้างข้อมูลทดสอบ 50 รายการ?',
-        text: 'สร้างรายการสินค้าตัวอย่างตามหมวดหมู่ PMA จริง (รวมบาร์โค้ดซ้ำเพื่อทดสอบ Auto-Fill)',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#10b981',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'สร้างข้อมูลเลย!',
-        cancelButtonText: 'ยกเลิก'
-      }).then(async (result) => {
-        if (result.isConfirmed) {
-          try {
-            showLoading(true);
-            const res = await fetch('/api/seed', { method: 'POST' });
-            const data = await res.json();
-            showLoading(false);
-            if (data.success) {
-              Swal.fire('สำเร็จ!', `สร้างข้อมูลตัวอย่าง ${data.count} รายการเรียบร้อย`, 'success');
-              switchTab('inventory');
-              checkBellStatus();
-            }
-          } catch (err) {
-            showLoading(false);
-          }
-        }
-      });
     }
   </script>
 </body>

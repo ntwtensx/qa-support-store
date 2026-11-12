@@ -1,21 +1,16 @@
 /**
- * 🚀 Rocket Coding - QA-Support Store V5.0 (Enterprise Store Edition)
+ * 🚀 Rocket Coding - QA-Support Store V5.1 (Production Clean Edition)
  * Backend Server: Node.js + Express + MongoDB (Mongoose)
- * Features: PIN Auth (Staff/Admin), 92 PMA Master Categories, Smart Barcode Auto-Lookup, Deep Edit
  */
 
 require('dotenv').config();
 const dns = require('dns');
 
-// --- [1] Smart DNS Configuration ---
-// หากรันบนเครื่องตัวเอง (Localhost) ให้ใช้ Google/Cloudflare DNS เพื่อทะลวง Router ที่บล็อก SRV
-// หากรันบน Render Cloud ให้ใช้ระบบ DNS ภายในของ Data Center โดยตรง
+// --- [1] ตั้งค่า DNS อัตโนมัติสำหรับ Localhost และ Render Cloud ---
 if (!process.env.RENDER) {
   try {
     dns.setServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
-  } catch (e) {
-    console.warn('⚠️ DNS Override skipped:', e.message);
-  }
+  } catch (e) {}
 }
 
 const express = require('express');
@@ -31,7 +26,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- [3] ฐานข้อมูลหมวดหมู่ PMA ฉบับสมบูรณ์ตามอ้างอิง (92 รายการ) ---
+// --- [3] ฐานข้อมูลหมวดหมู่ PMA มาตรฐาน (92 รายการ) ---
 const PMA_MASTER_LIST = [
   { code: '01', name: 'CHILLED BREAD' },
   { code: '02', name: 'APPETIZER' },
@@ -127,7 +122,6 @@ const PMA_MASTER_LIST = [
   { code: '97', name: 'SOCIAL WELFARE' }
 ];
 
-// สร้าง Map สำหรับค้นหาชื่อ PMA จากรหัส 2 หลักได้ใน O(1)
 const PMA_MAP = new Map(PMA_MASTER_LIST.map(item => [item.code, `${item.code} - ${item.name}`]));
 
 function resolvePmaLabel(input) {
@@ -144,30 +138,29 @@ function extractPmaCode(input) {
   return match ? match[1] : '';
 }
 
-// --- [4] บัญชีผู้ใช้งานและรหัส PIN ทดลอง ---
+// --- [4] บัญชีผู้ใช้งานระบบ ---
 const STORE_ACCOUNTS = {
   'test@store': {
     email: 'test@store',
     pin: '000000',
     role: 'staff',
-    title: 'พนักงานร้านค้า (Store Staff)'
+    title: 'พนักงานร้านค้า'
   },
   'admin@store': {
     email: 'admin@store',
     pin: '000000',
     role: 'admin',
-    title: 'ผู้จัดการระบบ (Store Admin)'
+    title: 'ผู้ดูแลระบบ'
   }
 };
 
-// --- [5] ระบบเชื่อมต่อ MongoDB Atlas ---
+// --- [5] เชื่อมต่อฐานข้อมูล MongoDB Atlas ---
 const MONGODB_URI = process.env.MONGODB_URI;
 let lastDbError = null;
 
 async function connectDatabase() {
   if (!MONGODB_URI) {
-    lastDbError = 'ยังไม่ได้ตั้งค่า MONGODB_URI ใน Environment Variables';
-    console.error('❌ ERROR:', lastDbError);
+    lastDbError = 'ไม่ได้ตั้งค่า MONGODB_URI';
     return;
   }
   try {
@@ -176,7 +169,7 @@ async function connectDatabase() {
       socketTimeoutMS: 45000,
     });
     lastDbError = null;
-    console.log('✅ Connected to MongoDB Atlas successfully!');
+    console.log('✅ Connected to MongoDB Atlas');
   } catch (err) {
     lastDbError = err.message;
     console.error('❌ MongoDB Connection Error:', err.message);
@@ -185,22 +178,22 @@ async function connectDatabase() {
 
 connectDatabase();
 
-// --- [6] โครงสร้างตารางสินค้า (Mongoose Schema) ---
+// --- [6] โครงสร้างตารางฐานข้อมูล (Product Schema) ---
 const productSchema = new mongoose.Schema({
-  id: { type: String, required: true, trim: true, index: true }, // รหัสบาร์โค้ดสินค้า
-  pmaCode: { type: String, required: true, trim: true, index: true }, // รหัส PMA 2 หลัก เช่น "40"
-  category: { type: String, required: true, trim: true },        // ชื่อเต็มเช่น "40 - CONFECTIONERY"
-  name: { type: String, required: true, trim: true },            // ชื่อสินค้า
-  price: { type: Number, required: true, default: 0 },           // ราคา
-  inventory: { type: Number, required: true, default: 0 },       // จำนวนคงเหลือ
-  mfgDate: { type: String, required: true },                     // วันผลิต (YYYY-MM-DD)
-  expDate: { type: String, required: true },                     // วันหมดอายุ (YYYY-MM-DD)
-  expDateObj: { type: Number, required: true },                  // Timestamp สำหรับเรียงลำดับ
+  id: { type: String, required: true, trim: true, index: true },
+  pmaCode: { type: String, required: true, trim: true, index: true },
+  category: { type: String, required: true, trim: true },
+  name: { type: String, required: true, trim: true },
+  price: { type: Number, required: true, default: 0 },
+  inventory: { type: Number, required: true, default: 0 },
+  mfgDate: { type: String, required: true },
+  expDate: { type: String, required: true },
+  expDateObj: { type: Number, required: true },
   status: { type: String, enum: ['Pending', 'Managed'], default: 'Pending' },
   actionDate: { type: String, default: '' },
-  pl: { type: String, default: '-' },                            // ตำแหน่ง Planogram
-  createdBy: { type: String, default: 'system' },                // ผู้รับสินค้าเข้า
-  managedBy: { type: String, default: '' }                       // ผู้กดตรวจสอบจัดการ
+  pl: { type: String, default: '-' },
+  createdBy: { type: String, default: 'system' },
+  managedBy: { type: String, default: '' }
 }, { timestamps: true });
 
 productSchema.index({ pmaCode: 1, expDateObj: 1 });
@@ -208,7 +201,7 @@ productSchema.index({ status: 1, expDate: 1 });
 
 const Product = mongoose.model('Product', productSchema);
 
-// --- [7] Helper Functions (เวลาประเทศไทย UTC+7) ---
+// --- [7] ฟังก์ชันจัดการวันที่ตามเวลาประเทศไทย (UTC+7) ---
 function getThaiDateObj() {
   const now = new Date();
   const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
@@ -230,15 +223,14 @@ function formatDate(dateInput) {
 }
 
 // ==========================================
-// 🚀 REST API ENDPOINTS (V5.0)
+// 🚀 REST API ENDPOINTS
 // ==========================================
 
-// 0. Health Check & Master PMA List
 app.get('/api/health', (req, res) => {
   const isConnected = mongoose.connection.readyState === 1;
   res.json({
     connected: isConnected,
-    error: isConnected ? null : (lastDbError || 'กำลังเชื่อมต่อฐานข้อมูล...'),
+    error: isConnected ? null : (lastDbError || 'กำลังเชื่อมต่อ...'),
     thaiDate: formatDate(getThaiDateObj())
   });
 });
@@ -247,17 +239,17 @@ app.get('/api/pma-master', (req, res) => {
   res.json(PMA_MASTER_LIST);
 });
 
-// 1. ระบบตรวจสอบ PIN Login (Authentication)
+// 1. ตรวจสอบการล็อกอินด้วย PIN
 app.post('/api/auth/login', (req, res) => {
   const { email, pin } = req.body;
   const cleanEmail = String(email || '').trim().toLowerCase();
   const account = STORE_ACCOUNTS[cleanEmail];
 
   if (!account) {
-    return res.status(401).json({ success: false, message: 'ไม่พบบัญชีผู้ใช้งานนี้ในระบบ (ใช้ test@store หรือ admin@store)' });
+    return res.status(401).json({ success: false, message: 'ไม่พบบัญชีผู้ใช้งาน' });
   }
   if (account.pin !== String(pin || '').trim()) {
-    return res.status(401).json({ success: false, message: 'รหัส PIN ไม่ถูกต้อง (รหัสทดลองคือ 000000)' });
+    return res.status(401).json({ success: false, message: 'รหัส PIN ไม่ถูกต้อง' });
   }
 
   res.json({
@@ -270,11 +262,10 @@ app.post('/api/auth/login', (req, res) => {
   });
 });
 
-// 2. ค้นหาข้อมูลสินค้าจากรหัสบาร์โค้ด (Smart Barcode Auto-Lookup สำหรับหน้า Inbound)
+// 2. ค้นหารหัสสินค้าเดิมจากบาร์โค้ด (Auto-Lookup)
 app.get('/api/products/lookup/:barcode', async (req, res) => {
   try {
     const barcode = String(req.params.barcode || '').trim();
-    // ค้นหารายการล่าสุดที่เคยบันทึกด้วยบาร์โค้ดนี้
     const existing = await Product.findOne({ id: barcode }).sort({ createdAt: -1 }).lean();
 
     if (!existing) {
@@ -298,7 +289,7 @@ app.get('/api/products/lookup/:barcode', async (req, res) => {
   }
 });
 
-// 3. รับสินค้าเข้าใหม่ (Inbound Product Save)
+// 3. บันทึกรับสินค้าเข้า
 app.post('/api/products', async (req, res) => {
   try {
     const { id, pma, name, price, qty, mfg, exp, pl, userEmail } = req.body;
@@ -330,10 +321,9 @@ app.post('/api/products', async (req, res) => {
   }
 });
 
-// 4. ดึงหมวดหมู่ PMA ทั้งหมดพร้อมนับจำนวนสินค้าจริงในแต่ละหมวดหมู่
+// 4. ดึงหมวดหมู่ PMA ทั้งหมดพร้อมจำนวนสินค้าคงเหลือ
 app.get('/api/categories', async (req, res) => {
   try {
-    // นับจำนวนสินค้าแยกตาม pmaCode จาก MongoDB
     const counts = await Product.aggregate([
       {
         $group: {
@@ -348,7 +338,6 @@ app.get('/api/categories', async (req, res) => {
 
     const countMap = new Map(counts.map(c => [c._id, c]));
 
-    // ผสานข้อมูล PMA ทั้ง 92 รายการเข้ากับจำนวนสินค้าจริง
     const fullDirectory = PMA_MASTER_LIST.map(pma => {
       const stat = countMap.get(pma.code) || { totalCount: 0, pendingCount: 0 };
       return {
@@ -366,7 +355,7 @@ app.get('/api/categories', async (req, res) => {
   }
 });
 
-// 5. ดึงรายการสินค้าตามรหัส PMA (เรียงตามวันหมดอายุใกล้สุดขึ้นก่อน)
+// 5. ดึงรายการสินค้าตามรหัสหมวดหมู่ PMA
 app.get('/api/products/category/:code', async (req, res) => {
   try {
     const code = extractPmaCode(req.params.code) || req.params.code;
@@ -383,14 +372,14 @@ app.get('/api/products/category/:code', async (req, res) => {
   }
 });
 
-// 6. แก้ไขข้อมูลสินค้าเชิงลึก (สงวนสิทธิ์เฉพาะ admin@store)
+// 6. แก้ไขข้อมูลสินค้าสำหรับ Admin
 app.put('/api/products/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { role, name, pmaCode, pl, price, inventory, mfgDate, expDate, status } = req.body;
 
     if (role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'ปฏิเสธการเข้าถึง: เฉพาะบัญชี admin@store เท่านั้นที่แก้ไขเชิงลึกได้' });
+      return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์แก้ไขข้อมูล' });
     }
 
     const code = extractPmaCode(pmaCode) || '00';
@@ -417,7 +406,7 @@ app.put('/api/products/:id', async (req, res) => {
     );
 
     if (!updated) {
-      return res.status(404).json({ success: false, message: 'ไม่พบสินค้าที่ต้องการแก้ไข' });
+      return res.status(404).json({ success: false, message: 'ไม่พบข้อมูลสินค้า' });
     }
     res.json({ success: true, data: updated });
   } catch (error) {
@@ -425,14 +414,14 @@ app.put('/api/products/:id', async (req, res) => {
   }
 });
 
-// 7. ลบรายการสินค้า (สงวนสิทธิ์เฉพาะ admin@store)
+// 7. ลบรายการสินค้าสำหรับ Admin
 app.delete('/api/products/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const role = req.headers['x-user-role'];
 
     if (role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'ปฏิเสธการเข้าถึง: เฉพาะ admin@store เท่านั้นที่ลบสินค้าได้' });
+      return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์ลบข้อมูล' });
     }
 
     await Product.findByIdAndDelete(id);
@@ -442,7 +431,7 @@ app.delete('/api/products/:id', async (req, res) => {
   }
 });
 
-// 8. ดึงประวัติสินค้าที่จัดการแล้ว (Managed History)
+// 8. ดึงประวัติการจัดการสินค้า
 app.get('/api/products/history', async (req, res) => {
   try {
     const history = await Product.find({ status: 'Managed' }).sort({ updatedAt: -1 }).lean();
@@ -452,7 +441,7 @@ app.get('/api/products/history', async (req, res) => {
   }
 });
 
-// 9. แจ้งเตือนสินค้าหมดอายุพรุ่งนี้
+// 9. ดึงรายการสินค้าหมดอายุวันพรุ่งนี้
 app.get('/api/notifications/tomorrow', async (req, res) => {
   try {
     const todayThai = getThaiDateObj();
@@ -471,7 +460,7 @@ app.get('/api/notifications/tomorrow', async (req, res) => {
   }
 });
 
-// 10. แจ้งเตือนสินค้าหมดอายุเดือนหน้า จัดกลุ่มตาม PMA
+// 10. ดึงรายการสินค้าหมดอายุเดือนหน้า
 app.get('/api/notifications/next-month', async (req, res) => {
   try {
     const todayThai = getThaiDateObj();
@@ -494,7 +483,7 @@ app.get('/api/notifications/next-month', async (req, res) => {
   }
 });
 
-// 11. กดยืนยันการจัดการสินค้า (Mark as Managed)
+// 11. บันทึกสถานะตรวจสอบแล้ว (Managed)
 app.patch('/api/products/:identifier/manage', async (req, res) => {
   try {
     const { identifier } = req.params;
@@ -518,68 +507,9 @@ app.patch('/api/products/:identifier/manage', async (req, res) => {
     );
 
     if (!updated) {
-      return res.status(404).json({ success: false, message: 'ไม่พบรายการสินค้านี้' });
+      return res.status(404).json({ success: false, message: 'ไม่พบรายการสินค้า' });
     }
     res.json({ success: true, data: updated });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// 12. สร้างข้อมูลทดสอบ 50 รายการ โดยใช้รหัส PMA จริงจากอ้างอิง
-app.post('/api/seed', async (req, res) => {
-  try {
-    await Product.deleteMany({});
-
-    const samplePmas = [
-      { code: '01', sample: 'ขนมปังไส้ครีม' },
-      { code: '16', sample: 'สลัดอกไก่พริกไทยดำ' },
-      { code: '19', sample: 'ข้าวผัดปูกล่องแช่เย็น' },
-      { code: '29', sample: 'นม UHT รสจืด 225ml' },
-      { code: '30', sample: 'นมพาสเจอร์ไรส์ 400ml' },
-      { code: '40', sample: 'ช็อกโกแลตอัลมอนด์' },
-      { code: '41', sample: 'มันฝรั่งทอดกรอบรสโนริสาหร่าย' },
-      { code: '42', sample: 'น้ำอัดลมโคล่า 325ml' },
-      { code: '49', sample: 'เครื่องดื่มเกลือแร่' },
-      { code: '60', sample: 'เค้กกล้วยหอมแพ็คคู่' }
-    ];
-
-    const baseDate = getThaiDateObj();
-    const mockData = [];
-
-    for (let i = 1; i <= 50; i++) {
-      const picked = samplePmas[i % samplePmas.length];
-      const plCode = `${picked.code}-${String.fromCharCode(65 + (i % 6))}-0${(i % 9) + 1}`;
-      const expOffset = i <= 5 ? 1 : Math.floor(Math.random() * 60) - 3;
-      const expDate = new Date(baseDate);
-      expDate.setDate(baseDate.getDate() + expOffset);
-
-      const mfgDate = new Date(expDate);
-      mfgDate.setMonth(mfgDate.getMonth() - 3);
-      const expStr = formatDate(expDate);
-
-      // สร้างบาร์โค้ดซ้ำกันบางรายการเพื่อทดสอบระบบ Smart Auto-Lookup ได้ทันที!
-      const barcodeId = `8851000000${String((i % 15) + 1).padStart(3, '0')}`;
-
-      mockData.push({
-        id: barcodeId,
-        pmaCode: picked.code,
-        category: resolvePmaLabel(picked.code),
-        name: `${picked.sample} รุ่น #${(i % 15) + 1}`,
-        price: ((i % 8) + 2) * 5,
-        inventory: Math.floor(Math.random() * 35) + 5,
-        mfgDate: formatDate(mfgDate),
-        expDate: expStr,
-        expDateObj: new Date(expStr).getTime(),
-        status: 'Pending',
-        actionDate: '',
-        pl: plCode,
-        createdBy: 'admin@store'
-      });
-    }
-
-    await Product.insertMany(mockData);
-    res.json({ success: true, count: mockData.length });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -590,5 +520,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 QA-Support Store V5.0 Enterprise Edition is running on port ${PORT}`);
+  console.log(`🚀 QA-Support Store V5.1 running on port ${PORT}`);
 });
