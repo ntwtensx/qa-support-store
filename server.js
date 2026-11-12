@@ -1,6 +1,7 @@
 /**
- * 🚀 Rocket Coding - QA-Support Store V5.1 (Production Clean Edition)
+ * 🚀 Rocket Coding - QA-Support Store V5.2 (Always-Awake Production Edition)
  * Backend Server: Node.js + Express + MongoDB (Mongoose)
+ * Features: 3-Layer Anti-Sleep Keep-Alive Engine, PIN Auth, 92 PMA Master List, Smart Barcode Lookup
  */
 
 require('dotenv').config();
@@ -122,6 +123,7 @@ const PMA_MASTER_LIST = [
   { code: '97', name: 'SOCIAL WELFARE' }
 ];
 
+// สร้าง Map สำหรับจับคู่รหัส PMA ความเร็วสูงระดับ O(1)
 const PMA_MAP = new Map(PMA_MASTER_LIST.map(item => [item.code, `${item.code} - ${item.name}`]));
 
 function resolvePmaLabel(input) {
@@ -223,9 +225,19 @@ function formatDate(dateInput) {
 }
 
 // ==========================================
-// 🚀 REST API ENDPOINTS
+// 🚀 REST API ENDPOINTS & ANTI-SLEEP ROUTE
 // ==========================================
 
+// [Anti-Sleep Layer 1] Endpoint ความเร็วสูงสำหรับรับสัญญาณปลุกเซิร์ฟเวอร์ (Keep-Alive Ping)
+app.get('/api/ping', (req, res) => {
+  res.status(200).json({
+    status: 'awake',
+    dbConnected: mongoose.connection.readyState === 1,
+    timestamp: Date.now()
+  });
+});
+
+// ตรวจสอบสถานะระบบและฐานข้อมูล
 app.get('/api/health', (req, res) => {
   const isConnected = mongoose.connection.readyState === 1;
   res.json({
@@ -519,6 +531,34 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// --- [8] Anti-Sleep Layer 2: ระบบปลุกเซิร์ฟเวอร์อัตโนมัติ (Self-Ping Engine) ---
+function startKeepAliveEngine() {
+  // Render จะสร้างตัวแปร RENDER_EXTERNAL_URL (เช่น https://qa-support-store.onrender.com) ให้อัตโนมัติ
+  const externalUrl = process.env.RENDER_EXTERNAL_URL || process.env.APP_URL;
+
+  if (!externalUrl) {
+    console.log('ℹ️ Keep-Alive Engine: Running in Local Mode (No external URL needed)');
+    return;
+  }
+
+  const pingTarget = `${externalUrl.replace(/\/$/, '')}/api/ping`;
+  const INTERVAL_MS = 10 * 60 * 1000; // ยิงปลุกทุกๆ 10 นาที (ก่อนครบกำหนดหลับ 15 นาทีของ Render)
+
+  console.log(`⚡ Keep-Alive Engine Activated: Pinging ${pingTarget} every 10 minutes`);
+
+  setInterval(async () => {
+    try {
+      const response = await fetch(pingTarget);
+      if (response.ok) {
+        console.log(`💓 [Keep-Alive] Ping success (${response.status}) at ${new Date().toISOString()}`);
+      }
+    } catch (err) {
+      console.warn(`⚠️ [Keep-Alive] Ping warning:`, err.message);
+    }
+  }, INTERVAL_MS);
+}
+
 app.listen(PORT, () => {
-  console.log(`🚀 QA-Support Store V5.1 running on port ${PORT}`);
+  console.log(`🚀 QA-Support Store V5.2 (Always-Awake) running on port ${PORT}`);
+  startKeepAliveEngine();
 });

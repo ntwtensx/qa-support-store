@@ -510,7 +510,7 @@
   </div>
 
   <!-- =========================================================
-       ⚡ JAVASCRIPT APPLICATION LOGIC (V5.1 Clean Edition)
+       ⚡ JAVASCRIPT APPLICATION LOGIC (V5.2 Always-Awake Edition)
        ========================================================= -->
   <script>
     // --- ตัวแปรสถานะหลักของระบบ ---
@@ -527,9 +527,12 @@
     let tomorrowItems = [];
     let currentTomorrowIndex = 0;
     let currentHealthInfo = { connected: false, error: null };
+    let heartbeatTimer = null;
 
-    // --- เริ่มต้นระบบและตรวจสอบสิทธิ์ล็อกอิน ---
+    // --- เริ่มต้นระบบและเปิดใช้งานระบบป้องกันเว็บหลับ (Client Heartbeat) ---
     window.onload = function() {
+      startClientHeartbeat();
+
       const savedSession = sessionStorage.getItem('qa_store_user');
       if (savedSession) {
         currentUser = JSON.parse(savedSession);
@@ -545,7 +548,39 @@
           else if (e.key === 'Escape') clearPin();
         }
       });
+
+      // เมื่อพนักงานเปิดหน้าจอมือถือกลับมาที่เว็บ ให้ส่งสัญญาณปลุกเซิร์ฟเวอร์ทันที
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          sendKeepAlivePing();
+        }
+      });
     };
+
+    // =========================================================
+    // 0. ระบบป้องกันเว็บหลับฝั่งหน้าบ้าน (Client-Side Heartbeat Engine)
+    // =========================================================
+    async function sendKeepAlivePing() {
+      try {
+        const res = await fetch('/api/ping', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          const dot = document.getElementById('db-status-dot');
+          const text = document.getElementById('db-status-text');
+          if (data.dbConnected && dot && text) {
+            dot.className = 'w-2 h-2 rounded-full bg-green-300';
+            text.innerText = 'ออนไลน์';
+          }
+        }
+      } catch (e) {}
+    }
+
+    function startClientHeartbeat() {
+      sendKeepAlivePing();
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      // ส่งสัญญาณชีพจรไปปลุกเซิร์ฟเวอร์ทุกๆ 5 นาที ขณะที่เปิดหน้าเว็บค้างไว้
+      heartbeatTimer = setInterval(sendKeepAlivePing, 5 * 60 * 1000);
+    }
 
     // =========================================================
     // 1. ระบบยืนยันตัวตนด้วย PIN (PIN Authentication)
@@ -1104,7 +1139,7 @@
       } catch (e) {}
     }
 
-    // ตรวจสอบบาร์โค้ด: หากพบในระบบ แสดงเฉพาะป้าย "✓ พบรหัสสินค้า" และล็อกข้อมูลหลักไว้ให้กรอกเฉพาะ จำนวน + Mfg + Exp
+    // ตรวจสอบบาร์โค้ด: หากพบในระบบ แสดงเฉพาะป้าย "✓ พบรหัสสินค้า"
     async function processBarcodeStep1() {
       const pid = document.getElementById('input-pid').value.trim();
       if (!pid) {
@@ -1133,7 +1168,6 @@
           document.getElementById('step-dot-3').className = 'w-7 h-7 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center font-bold shadow';
           document.getElementById('step-line-2').style.width = '100%';
 
-          // แสดงเฉพาะป้าย ✓ พบรหัสสินค้า
           document.getElementById('autofill-badge').classList.remove('hidden');
 
           document.getElementById('form-id').value = lookup.product.id;
