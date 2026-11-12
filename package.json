@@ -1,0 +1,19 @@
+{
+  "name": "qa-support-store",
+  "version": "4.0.0",
+  "description": "QA & Inbound System V4 (Enterprise Edition) - Rocket Inventory",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mongoose": "^8.5.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

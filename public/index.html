@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QA-Support Store | Rocket Inventory V4.2</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+  <style>
+    body { font-family: 'Prompt', sans-serif; background-color: #f0fdf4; }
+    .btn-bounce:active { transform: scale(0.95); }
+    .fade-in { animation: fadeIn 0.3s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .managed-item { background-color: #fef9c3 !important; border-color: #facc15 !important; }
+    #reader-1, #reader-2 { width: 100%; border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
+    
+    /* Z-Index Hierarchy Management */
+    .z-header { z-index: 10; }
+    .z-modal-lower { z-index: 50; }
+    .z-modal-top { z-index: 70; }
+  </style>
+</head>
+<body class="text-gray-700 h-screen flex flex-col overflow-hidden">
+
+  <!-- Top Header Navigation -->
+  <header class="bg-emerald-600 text-white p-4 shadow-lg flex justify-between items-center z-header">
+    <div class="flex items-center gap-3">
+      <button onclick="toggleInboundMode()" class="bg-white text-emerald-600 px-3 py-2 rounded-lg font-bold shadow hover:bg-emerald-50 transition flex items-center gap-2 btn-bounce">
+        <i class="fa-solid fa-dolly"></i> <span class="hidden sm:inline">รับสินค้าเข้า</span>
+      </button>
+      <div class="flex items-center gap-2 cursor-pointer ml-1" onclick="goHome()">
+        <div>
+          <h1 class="text-sm font-bold leading-tight flex items-center gap-1.5">
+            <i class="fa-solid fa-rocket text-emerald-200"></i> QA-Support Store
+          </h1>
+          <!-- ป้ายไฟแสดงสถานะการเชื่อมต่อฐานข้อมูล Cloud แบบ Real-time -->
+          <div id="db-status-badge" onclick="showDbStatusDetail(event)" class="inline-flex items-center gap-1 text-[10px] bg-emerald-700/80 px-2 py-0.5 rounded-full mt-0.5 cursor-pointer hover:bg-emerald-800 transition">
+            <span id="db-status-dot" class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
+            <span id="db-status-text">Checking DB...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="flex items-center gap-2 sm:gap-3">
+      <button onclick="seedDemoData()" title="สร้างข้อมูลตัวอย่าง 50 รายการ" class="p-2 hover:bg-emerald-700 rounded-full transition duration-300 text-emerald-100 hover:text-white">
+        <i class="fa-solid fa-wand-magic-sparkles text-lg"></i>
+      </button>
+      <button onclick="goToHistory()" title="ประวัติการจัดการ" class="relative p-2 hover:bg-emerald-700 rounded-full transition duration-300">
+        <i class="fa-solid fa-clipboard-check text-xl"></i>
+      </button>
+      <button onclick="checkNextMonth()" title="หมดอายุเดือนหน้า" class="relative p-2 hover:bg-emerald-700 rounded-full transition duration-300">
+        <i class="fa-regular fa-calendar-days text-xl"></i>
+      </button>
+      <button onclick="checkTomorrow()" title="หมดอายุพรุ่งนี้" class="relative p-2 hover:bg-emerald-700 rounded-full transition duration-300">
+        <i class="fa-regular fa-bell text-xl"></i>
+        <span id="bell-dot" class="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-emerald-600 hidden"></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main id="main-content" class="flex-1 overflow-y-auto p-4 relative">
+    
+    <!-- Loading Spinner -->
+    <div id="loading" class="hidden flex flex-col justify-center items-center h-full text-emerald-600">
+      <i class="fa-solid fa-circle-notch fa-spin text-4xl mb-2"></i>
+      <p>กำลังประมวลผล...</p>
+    </div>
+
+    <!-- Page 1: Inbound Scanner Wizard -->
+    <div id="page-inbound" class="hidden fade-in max-w-md mx-auto pb-20">
+      <div class="flex justify-between items-center mb-6 px-2">
+        <div id="step-dot-1" class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold">1</div>
+        <div class="flex-1 h-1 bg-gray-200 mx-2"><div id="step-line-1" class="h-full bg-emerald-600 w-0 transition-all duration-300"></div></div>
+        <div id="step-dot-2" class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-bold transition-all">2</div>
+        <div class="flex-1 h-1 bg-gray-200 mx-2"><div id="step-line-2" class="h-full bg-emerald-600 w-0 transition-all duration-300"></div></div>
+        <div id="step-dot-3" class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-bold transition-all">3</div>
+      </div>
+
+      <!-- Step 1: Scan Product ID -->
+      <div id="inbound-step-1" class="bg-white p-6 rounded-xl shadow-md">
+        <h2 class="text-xl font-bold text-gray-800 mb-4"><i class="fa-solid fa-barcode text-emerald-600"></i> สแกนสินค้า (ID)</h2>
+        <div id="reader-wrapper-1" class="hidden mb-4">
+          <div id="reader-1"></div>
+          <button onclick="stopCamera(1)" class="w-full mt-2 py-1 bg-red-50 text-red-500 rounded text-sm font-semibold">ปิดกล้อง</button>
+        </div>
+        <div class="space-y-4">
+          <input type="text" id="input-pid" placeholder="คลิกเพื่อสแกนหรือพิมพ์ ID" class="w-full text-xl p-3 border-2 border-emerald-200 rounded-lg focus:border-emerald-500 focus:outline-none text-center font-mono" onkeypress="handleEnter(event, 1)">
+          <div class="grid grid-cols-2 gap-3">
+            <button onclick="startCamera(1)" class="py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium"><i class="fa-solid fa-camera"></i> ใช้กล้อง</button>
+            <button onclick="nextStep(1)" class="py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 shadow-lg btn-bounce">ถัดไป <i class="fa-solid fa-arrow-right"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Scan Planogram -->
+      <div id="inbound-step-2" class="hidden bg-white p-6 rounded-xl shadow-md">
+        <h2 class="text-xl font-bold text-gray-800 mb-4"><i class="fa-solid fa-layer-group text-emerald-600"></i> สแกน Planogram</h2>
+        <div id="reader-wrapper-2" class="hidden mb-4">
+          <div id="reader-2"></div>
+          <button onclick="stopCamera(2)" class="w-full mt-2 py-1 bg-red-50 text-red-500 rounded text-sm font-semibold">ปิดกล้อง</button>
+        </div>
+        <div class="space-y-4">
+          <input type="text" id="input-pl" placeholder="Ex. 40-A-01" class="w-full text-xl p-3 border-2 border-emerald-200 rounded-lg focus:border-emerald-500 focus:outline-none text-center font-mono uppercase" onkeypress="handleEnter(event, 2)">
+          <div class="grid grid-cols-2 gap-3">
+            <button onclick="startCamera(2)" class="py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium"><i class="fa-solid fa-camera"></i> ใช้กล้อง</button>
+            <button onclick="nextStep(2)" class="py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 shadow-lg btn-bounce">ถัดไป <i class="fa-solid fa-arrow-right"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Product Details -->
+      <div id="inbound-step-3" class="hidden bg-white p-6 rounded-xl shadow-md border-t-4 border-emerald-500">
+        <h2 class="text-xl font-bold text-emerald-800 mb-4">รายละเอียดสินค้า</h2>
+        <form id="form-product" onsubmit="submitProduct(event)">
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div><label class="text-xs text-gray-500">Product ID</label><input type="text" id="form-id" class="w-full bg-gray-100 border p-2 rounded text-sm font-mono" readonly></div>
+            <div><label class="text-xs text-gray-500">PMA Category</label><input type="text" id="form-pma" class="w-full bg-emerald-100 border border-emerald-200 p-2 rounded text-sm font-bold text-emerald-700" readonly></div>
+          </div>
+          <div class="mb-3"><label class="text-xs text-gray-500">Planogram Location</label><input type="text" id="form-pl" class="w-full bg-gray-100 border p-2 rounded text-sm font-mono" readonly></div>
+          <div class="mb-3"><label class="block text-sm font-bold text-gray-700 mb-1">ชื่อสินค้า</label><input type="text" id="form-name" required class="w-full border p-2 rounded focus:ring-2 focus:ring-emerald-500 focus:outline-none"></div>
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div><label class="block text-sm font-bold text-gray-700 mb-1">จำนวน</label><input type="number" id="form-qty" required min="1" class="w-full border p-2 rounded"></div>
+            <div><label class="block text-sm font-bold text-gray-700 mb-1">ราคา</label><input type="number" id="form-price" required step="0.25" min="0" class="w-full border p-2 rounded"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-3 mb-6">
+            <div><label class="block text-sm font-bold text-gray-700 mb-1">วันผลิต (Mfg)</label><input type="date" id="form-mfg" required class="w-full border p-2 rounded text-sm"></div>
+            <div><label class="block text-sm font-bold text-gray-700 mb-1">วันหมดอายุ (Exp)</label><input type="date" id="form-exp" required class="w-full border p-2 rounded text-sm text-red-600 font-bold"></div>
+          </div>
+          <div class="flex gap-3">
+            <button type="button" onclick="resetInbound()" class="flex-1 py-3 bg-gray-200 text-gray-700 rounded-lg font-bold">ยกเลิก</button>
+            <button type="submit" class="flex-[2] py-3 bg-emerald-600 text-white rounded-lg font-bold shadow-lg hover:bg-emerald-700 btn-bounce">บันทึก</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Page 2: PMA Categories -->
+    <div id="page-categories" class="fade-in max-w-md mx-auto pb-20">
+      <h2 class="text-xl font-bold text-emerald-800 mb-4 border-l-4 border-emerald-500 pl-3">เลือกหมวดหมู่ (PMA)</h2>
+      <div id="category-list" class="grid grid-cols-1 gap-4"></div>
+    </div>
+
+    <!-- Page 3: Product List by Category -->
+    <div id="page-items" class="hidden fade-in max-w-md mx-auto pb-20">
+      <button onclick="goHome()" class="mb-4 text-emerald-600 hover:text-emerald-800 font-semibold flex items-center gap-1"><i class="fa-solid fa-chevron-left"></i> ย้อนกลับ</button>
+      <div class="flex justify-between items-end mb-3">
+        <h2 id="current-category-title" class="text-xl font-bold text-emerald-800">รายการสินค้า</h2>
+        <span class="text-xs text-gray-500 bg-white px-2 py-1 rounded shadow-sm">เรียงตามวันหมดอายุ</span>
+      </div>
+      <div id="item-list" class="space-y-3"></div>
+    </div>
+
+    <!-- Page 4: Managed History -->
+    <div id="page-history" class="hidden fade-in max-w-md mx-auto pb-20">
+      <button onclick="goHome()" class="mb-4 text-emerald-600 hover:text-emerald-800 font-semibold flex items-center gap-1"><i class="fa-solid fa-chevron-left"></i> หน้าหลัก</button>
+      <h2 class="text-xl font-bold text-emerald-800 mb-4 border-l-4 border-yellow-400 pl-3">บันทึกการจัดการ (History)</h2>
+      <div id="history-list" class="space-y-3"></div>
+    </div>
+
+  </main>
+
+  <!-- Modal 1: Product Detail -->
+  <div id="modal-product" class="fixed inset-0 bg-black bg-opacity-50 z-modal-top hidden flex justify-center items-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs p-6 relative fade-in z-modal-top">
+      <button onclick="closeModal('modal-product')" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times text-xl"></i></button>
+      <div class="text-center mb-4">
+        <div class="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-2 text-emerald-600"><i class="fa-solid fa-box-open text-3xl"></i></div>
+        <h3 id="modal-name" class="text-xl font-bold text-gray-800"></h3>
+        <p id="modal-category" class="text-sm text-emerald-600 font-semibold"></p>
+      </div>
+      <div class="space-y-2 text-sm mb-6">
+        <div class="flex justify-between border-b pb-1"><span>ID:</span> <span id="modal-id" class="font-mono text-gray-500"></span></div>
+        <div class="flex justify-between border-b pb-1"><span>Planogram:</span> <span id="modal-pl-display" class="font-mono font-bold text-emerald-600"></span></div>
+        <div class="flex justify-between border-b pb-1"><span>ราคา:</span> <span id="modal-price" class="font-bold"></span></div>
+        <div class="flex justify-between border-b pb-1"><span>จำนวนคงเหลือ:</span> <span id="modal-inventory" class="font-bold text-emerald-600 text-lg"></span></div>
+        <div class="flex justify-between border-b pb-1"><span>วันผลิต (Mfg):</span> <span id="modal-mfg" class="text-gray-600"></span></div>
+        <div class="flex justify-between pt-1"><span>หมดอายุ (Exp):</span> <span id="modal-exp" class="text-red-600 font-bold"></span></div>
+      </div>
+      <button id="btn-mark-detail" class="w-full py-2.5 bg-emerald-600 text-white rounded-lg shadow hover:bg-emerald-700 transition font-semibold"></button>
+    </div>
+  </div>
+
+  <!-- Modal 2: Expiring Next Month -->
+  <div id="modal-calendar" class="fixed inset-0 bg-black bg-opacity-50 z-modal-lower hidden flex justify-center items-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-0 overflow-hidden fade-in max-h-[85vh] flex flex-col">
+      <div class="bg-emerald-600 text-white p-4 flex justify-between items-center">
+        <h3 class="font-bold text-lg"><i class="fa-regular fa-calendar-days mr-1"></i> หมดอายุเดือนหน้า</h3>
+        <button onclick="closeModal('modal-calendar')"><i class="fa-solid fa-times text-lg"></i></button>
+      </div>
+      <div class="p-0 overflow-y-auto flex-1 bg-white">
+        <table class="w-full text-sm text-left border-collapse">
+          <tbody id="calendar-list"></tbody>
+        </table>
+        <div id="calendar-empty" class="hidden text-center py-10 text-gray-400">
+          <i class="fa-regular fa-face-smile text-3xl mb-2"></i><br>ไม่มีรายการสินค้าหมดอายุเดือนหน้า
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Expiring Tomorrow -->
+  <div id="modal-tomorrow" class="fixed inset-0 bg-black bg-opacity-50 z-modal-lower hidden flex justify-center items-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-0 overflow-hidden fade-in relative">
+      <div class="bg-red-500 text-white p-4 text-center">
+        <h3 class="font-bold text-lg"><i class="fa-regular fa-bell animate-pulse mr-1"></i> จะหมดอายุพรุ่งนี้!</h3>
+      </div>
+      <div id="tomorrow-content" class="p-6 text-center"></div>
+      <div class="px-6 pb-4">
+        <button id="btn-mark-tomorrow" class="w-full py-2.5 bg-yellow-400 text-yellow-900 rounded-lg shadow hover:bg-yellow-500 transition font-bold mb-3">
+          <i class="fa-solid fa-check-circle"></i> จัดการสินค้าเรียบร้อย
+        </button>
+      </div>
+      <div class="bg-gray-50 p-3 flex justify-between items-center border-t">
+        <button id="btn-prev" onclick="navTomorrow(-1)" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-30">ก่อนหน้า</button>
+        <span id="tomorrow-counter" class="text-xs text-gray-500 font-semibold"></span>
+        <button onclick="closeModal('modal-tomorrow')" class="text-gray-500 text-sm hover:underline">ปิด</button>
+        <button id="btn-next" onclick="navTomorrow(1)" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-30">ถัดไป</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let html5QrCode_1 = null;
+    let html5QrCode_2 = null;
+    let inboundData = { id: '', pl: '' };
+    let tomorrowItems = [];
+    let currentTomorrowIndex = 0;
+    let currentHealthInfo = { connected: false, error: null };
+
+    window.onload = function() {
+      checkHealthStatus();
+      loadCategories();
+      checkBellStatus();
+    };
+
+    // --- ตรวจสอบสถานะการเชื่อมต่อ Cloud Database ---
+    async function checkHealthStatus() {
+      try {
+        const res = await fetch('/api/health');
+        const data = await res.json();
+        currentHealthInfo = data;
+        const dot = document.getElementById('db-status-dot');
+        const text = document.getElementById('db-status-text');
+
+        if (data.connected) {
+          dot.className = 'w-2 h-2 rounded-full bg-green-400';
+          text.innerText = 'Cloud DB Online';
+        } else {
+          dot.className = 'w-2 h-2 rounded-full bg-red-400 animate-ping';
+          text.innerText = 'DB Error (คลิกดูสาเหตุ)';
+        }
+      } catch (e) {
+        console.error('Health check failed:', e);
+      }
+    }
+
+    function showDbStatusDetail(e) {
+      e.stopPropagation();
+      if (currentHealthInfo.connected) {
+        Swal.fire({
+          icon: 'success',
+          title: 'เชื่อมต่อฐานข้อมูลสำเร็จ!',
+          text: `เวลาเซิร์ฟเวอร์ไทย: ${currentHealthInfo.thaiDate}`,
+          confirmButtonColor: '#10b981'
+        });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'ฐานข้อมูลยังไม่ได้เชื่อมต่อ',
+          html: `<div class="text-left text-xs bg-red-50 p-3 rounded text-red-700 font-mono mb-2">${currentHealthInfo.error || 'Unknown Error'}</div>
+                 <p class="text-xs text-gray-600 text-left">1. ตรวจสอบว่าตั้งค่า <b>MONGODB_URI</b> ใน Environment Variables ของ Render แล้ว<br>2. ตรวจสอบว่าเปิด <b>0.0.0.0/0</b> ในหน้า Network Access ของ MongoDB Atlas แล้ว</p>`,
+          confirmButtonColor: '#10b981'
+        });
+      }
+    }
+
+    // --- Navigation Helpers ---
+    function hideAllPages() {
+      ['page-categories', 'page-items', 'page-history', 'page-inbound'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
+    }
+    function toggleInboundMode() { hideAllPages(); document.getElementById('page-inbound').classList.remove('hidden'); resetInbound(); }
+    function goHome() { hideAllPages(); document.getElementById('page-categories').classList.remove('hidden'); stopCamera(1); stopCamera(2); loadCategories(); checkHealthStatus(); }
+    function goToHistory() { hideAllPages(); document.getElementById('page-history').classList.remove('hidden'); loadManagedHistory(); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+    function showLoading(isLoading) { document.getElementById('loading').classList.toggle('hidden', !isLoading); }
+
+    function getItemKey(item) {
+      return item._id || item.id;
+    }
+
+    // --- 1. Load Categories ---
+    async function loadCategories() {
+      try {
+        showLoading(true);
+        const res = await fetch('/api/categories');
+        const cats = await res.json();
+        showLoading(false);
+        renderCategories(cats);
+      } catch (err) {
+        showLoading(false);
+      }
+    }
+
+    function renderCategories(cats) {
+      const c = document.getElementById('category-list');
+      c.innerHTML = '';
+      if (!Array.isArray(cats) || cats.length === 0) {
+        c.innerHTML = `
+          <div class="bg-white p-8 rounded-xl shadow text-center text-gray-500">
+            <i class="fa-solid fa-box-open text-4xl text-emerald-300 mb-3"></i>
+            <p class="font-bold text-gray-700 mb-1">ยังไม่มีข้อมูลสินค้าในระบบ</p>
+            <p class="text-xs mb-4">กดปุ่มด้านล่างเพื่อสร้างข้อมูลตัวอย่าง 50 รายการสำหรับทดสอบได้ทันที</p>
+            <button onclick="seedDemoData()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold shadow hover:bg-emerald-700 btn-bounce">
+              <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> สร้างข้อมูลตัวอย่าง (Demo 50 รายการ)
+            </button>
+          </div>`;
+        return;
+      }
+      cats.forEach(cat => {
+        const div = document.createElement('div');
+        div.className = 'bg-white p-6 rounded-xl shadow-md hover:shadow-lg hover:bg-emerald-50 cursor-pointer transition flex items-center justify-between border-l-8 border-emerald-400 btn-bounce';
+        div.onclick = () => loadProducts(cat);
+        div.innerHTML = `
+          <div class="flex items-center gap-4">
+            <div class="bg-emerald-100 p-3 rounded-full text-emerald-600"><i class="fa-solid fa-layer-group text-xl"></i></div>
+            <span class="text-lg font-bold text-gray-700">${cat}</span>
+          </div>
+          <i class="fa-solid fa-chevron-right text-gray-400"></i>
+        `;
+        c.appendChild(div);
+      });
+    }
+
+    // --- 2. Load Products by Category ---
+    async function loadProducts(cat) {
+      try {
+        hideAllPages();
+        document.getElementById('page-items').classList.remove('hidden');
+        document.getElementById('current-category-title').innerText = cat;
+        showLoading(true);
+        const res = await fetch(`/api/products/category/${encodeURIComponent(cat)}`);
+        const prods = await res.json();
+        showLoading(false);
+        renderProducts(prods);
+      } catch (err) {
+        showLoading(false);
+        Swal.fire('Error', 'โหลดรายการสินค้าไม่สำเร็จ', 'error');
+      }
+    }
+
+    function renderProducts(prods) {
+      const c = document.getElementById('item-list');
+      c.innerHTML = '';
+      if (!Array.isArray(prods) || prods.length === 0) {
+        c.innerHTML = '<div class="text-center text-gray-500 py-10">ไม่มีรายการสินค้าในหมวดหมู่นี้</div>';
+        return;
+      }
+      const todayStr = new Date().toISOString().split('T')[0];
+      prods.forEach(p => {
+        const isManaged = p.status === 'Managed';
+        const isExp = p.expDate < todayStr;
+        const icon = isManaged
+          ? '<i class="fa-solid fa-check-circle text-yellow-600 text-xl"></i>'
+          : (isExp ? '<span class="bg-red-500 text-white text-xs px-2 py-1 rounded font-bold">Exp</span>' : '<i class="fa-solid fa-circle-info text-emerald-400 text-xl"></i>');
+
+        const div = document.createElement('div');
+        div.className = `${isManaged ? 'managed-item' : 'bg-white border-gray-100'} p-4 rounded-lg shadow-sm border flex justify-between items-center cursor-pointer transition hover:shadow-md`;
+        div.onclick = () => showProductDetail(p);
+        div.innerHTML = `
+          <div>
+            <h4 class="font-bold text-gray-800">${p.name} <span class="text-gray-400 font-normal text-xs">(${p.inventory})</span></h4>
+            <div class="text-xs text-gray-500 mt-1">
+              <span class="bg-gray-100 px-2 py-0.5 rounded">Exp: ${p.expDate}</span>
+              <span class="ml-1 text-emerald-700 font-mono">PL: ${p.pl || '-'}</span>
+              ${isManaged ? '<span class="text-yellow-700 font-bold ml-2">Managed</span>' : ''}
+            </div>
+          </div>
+          <div class="text-right pl-2">${icon}</div>
+        `;
+        c.appendChild(div);
+      });
+    }
+
+    // --- 3. Product Detail & Mark as Managed ---
+    function showProductDetail(p) {
+      document.getElementById('modal-name').innerText = p.name;
+      document.getElementById('modal-category').innerText = p.category;
+      document.getElementById('modal-id').innerText = p.id;
+      document.getElementById('modal-pl-display').innerText = p.pl || '-';
+      document.getElementById('modal-price').innerText = `${p.price} บาท`;
+      document.getElementById('modal-inventory').innerText = `${p.inventory} ชิ้น`;
+      document.getElementById('modal-mfg').innerText = p.mfgDate || '-';
+      document.getElementById('modal-exp').innerText = p.expDate;
+
+      const btnMark = document.getElementById('btn-mark-detail');
+      if (p.status === 'Managed') {
+        btnMark.innerHTML = '<i class="fa-solid fa-check-double"></i> จัดการแล้ว';
+        btnMark.className = 'w-full py-2.5 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed font-semibold';
+        btnMark.disabled = true;
+      } else {
+        btnMark.innerHTML = '<i class="fa-solid fa-check"></i> Mark as Managed';
+        btnMark.className = 'w-full py-2.5 bg-emerald-600 text-white rounded-lg shadow hover:bg-emerald-700 transition font-semibold';
+        btnMark.disabled = false;
+        btnMark.onclick = () => executeMark(getItemKey(p), 'modal-product');
+      }
+      document.getElementById('modal-product').classList.remove('hidden');
+    }
+
+    function executeMark(identifier, closeModalId) {
+      Swal.fire({
+        title: 'ยืนยันการจัดการ?',
+        text: 'บันทึกว่าตรวจสอบสินค้านี้เรียบร้อยแล้ว',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#10b981',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'ยืนยัน (Yes)',
+        cancelButtonText: 'ยกเลิก'
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          try {
+            showLoading(true);
+            if (closeModalId) closeModal(closeModalId);
+            const res = await fetch(`/api/products/${encodeURIComponent(identifier)}/manage`, {
+              method: 'PATCH'
+            });
+            const data = await res.json();
+            showLoading(false);
+
+            if (data.success) {
+              Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ!', timer: 1200, showConfirmButton: false });
+              if (!document.getElementById('modal-calendar').classList.contains('hidden')) checkNextMonth();
+              if (!document.getElementById('page-items').classList.contains('hidden')) {
+                loadProducts(document.getElementById('current-category-title').innerText);
+              }
+              checkBellStatus();
+            } else {
+              Swal.fire('แจ้งเตือน', data.message || 'ไม่สามารถอัปเดตได้', 'warning');
+            }
+          } catch (err) {
+            showLoading(false);
+            Swal.fire('Error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
+          }
+        }
+      });
+    }
+
+    // --- 4. Calendar Notification (Next Month Grouped by PMA) ---
+    async function checkNextMonth() {
+      try {
+        showLoading(true);
+        const res = await fetch('/api/notifications/next-month');
+        const items = await res.json();
+        showLoading(false);
+
+        document.getElementById('modal-calendar').classList.remove('hidden');
+        const tbody = document.getElementById('calendar-list');
+        tbody.innerHTML = '';
+
+        if (!Array.isArray(items) || items.length === 0) {
+          document.getElementById('calendar-empty').classList.remove('hidden');
+        } else {
+          document.getElementById('calendar-empty').classList.add('hidden');
+          let lastCategory = null;
+
+          items.forEach(item => {
+            if (item.category !== lastCategory) {
+              const headerRow = `
+                <tr class="bg-emerald-50 border-b border-emerald-100">
+                  <td colspan="3" class="py-2 px-4 font-bold text-emerald-800 text-xs uppercase tracking-wider">
+                    <i class="fa-solid fa-layer-group mr-1"></i> ${item.category}
+                  </td>
+                </tr>`;
+              tbody.insertAdjacentHTML('beforeend', headerRow);
+              lastCategory = item.category;
+            }
+
+            const tr = document.createElement('tr');
+            tr.className = 'bg-white border-b hover:bg-gray-50 cursor-pointer transition';
+            tr.onclick = () => showProductDetail(item);
+            tr.innerHTML = `
+              <td class="px-4 py-3">
+                <div class="text-sm font-medium text-gray-900">
+                  ${item.name}
+                  <span class="text-gray-400 font-normal ml-1">(${item.inventory})</span>
+                </div>
+                <div class="text-xs text-gray-500 mt-0.5">ID: ${item.id} | PL: ${item.pl || '-'}</div>
+              </td>
+              <td class="px-4 py-3 text-right text-xs font-bold text-red-500 whitespace-nowrap">
+                ${item.expDate.substring(5)}
+              </td>
+              <td class="px-4 py-3 text-right w-12"></td>
+            `;
+
+            const actionTd = tr.querySelector('td:last-child');
+            const btn = document.createElement('button');
+            btn.className = 'text-emerald-600 hover:text-white hover:bg-emerald-600 border border-emerald-200 bg-white p-2 rounded-lg transition shadow-sm z-20 relative';
+            btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+            btn.onclick = (e) => {
+              e.stopPropagation();
+              executeMark(getItemKey(item), null);
+            };
+
+            actionTd.appendChild(btn);
+            tbody.appendChild(tr);
+          });
+        }
+      } catch (err) {
+        showLoading(false);
+        Swal.fire('Error', 'ไม่สามารถดึงข้อมูลเดือนหน้าได้', 'error');
+      }
+    }
+
+    // --- 5. Bell & Expiring Tomorrow ---
+    async function checkBellStatus() {
+      try {
+        const res = await fetch('/api/notifications/tomorrow');
+        const items = await res.json();
+        document.getElementById('bell-dot').classList.toggle('hidden', !Array.isArray(items) || items.length === 0);
+      } catch (err) {
+        console.error('Bell check error:', err);
+      }
+    }
+
+    async function checkTomorrow() {
+      try {
+        showLoading(true);
+        const res = await fetch('/api/notifications/tomorrow');
+        const items = await res.json();
+        showLoading(false);
+
+        tomorrowItems = Array.isArray(items) ? items : [];
+        currentTomorrowIndex = 0;
+
+        if (tomorrowItems.length === 0) {
+          Swal.fire('ยอดเยี่ยม!', 'ไม่มีรายการสินค้าที่หมดอายุวันพรุ่งนี้', 'success');
+          return;
+        }
+        document.getElementById('modal-tomorrow').classList.remove('hidden');
+        renderTomorrowItem();
+      } catch (err) {
+        showLoading(false);
+        Swal.fire('Error', 'ดึงข้อมูลแจ้งเตือนไม่สำเร็จ', 'error');
+      }
+    }
+
+    function renderTomorrowItem() {
+      const i = tomorrowItems[currentTomorrowIndex];
+      document.getElementById('tomorrow-content').innerHTML = `
+        <div class="text-emerald-600 font-bold mb-1">${i.category} (PL: ${i.pl || '-'})</div>
+        <h2 class="text-2xl font-bold text-gray-800 mb-1">${i.name}</h2>
+        <div class="text-xs text-gray-400 font-mono mb-2">ID: ${i.id} | คงเหลือ ${i.inventory} ชิ้น</div>
+        <div class="text-red-600 font-bold text-lg">Exp: ${i.expDate}</div>
+      `;
+      document.getElementById('tomorrow-counter').innerText = `${currentTomorrowIndex + 1} / ${tomorrowItems.length}`;
+      document.getElementById('btn-prev').disabled = currentTomorrowIndex === 0;
+      document.getElementById('btn-next').disabled = currentTomorrowIndex === tomorrowItems.length - 1;
+      document.getElementById('btn-mark-tomorrow').onclick = () => executeMark(getItemKey(i), 'modal-tomorrow');
+    }
+
+    function navTomorrow(d) {
+      currentTomorrowIndex += d;
+      if (currentTomorrowIndex < 0) currentTomorrowIndex = 0;
+      if (currentTomorrowIndex >= tomorrowItems.length) currentTomorrowIndex = tomorrowItems.length - 1;
+      renderTomorrowItem();
+    }
+
+    // --- 6. Managed History ---
+    async function loadManagedHistory() {
+      try {
+        showLoading(true);
+        const res = await fetch('/api/products/history');
+        const items = await res.json();
+        showLoading(false);
+
+        const c = document.getElementById('history-list');
+        c.innerHTML = '';
+        if (!Array.isArray(items) || items.length === 0) {
+          c.innerHTML = '<div class="text-center text-gray-400 py-10">ยังไม่มีประวัติการจัดการสินค้า</div>';
+          return;
+        }
+        items.forEach(p => {
+          c.innerHTML += `
+            <div class="bg-yellow-50 border border-yellow-200 p-4 rounded-lg flex justify-between items-center shadow-sm">
+              <div>
+                <h4 class="font-bold text-gray-800">${p.name} <span class="text-xs font-normal text-gray-500">(${p.category})</span></h4>
+                <div class="text-xs text-gray-500 mt-1">จัดการเมื่อ: ${p.actionDate || '-'} | Exp: ${p.expDate}</div>
+              </div>
+              <div class="bg-yellow-200 text-yellow-800 px-2.5 py-1 rounded text-xs font-bold">Managed</div>
+            </div>`;
+        });
+      } catch (err) {
+        showLoading(false);
+        Swal.fire('Error', 'ไม่สามารถโหลดประวัติได้', 'error');
+      }
+    }
+
+    // --- 7. Inbound Scanner & Form Submission ---
+    function resetInbound() {
+      document.getElementById('inbound-step-1').classList.remove('hidden');
+      document.getElementById('inbound-step-2').classList.add('hidden');
+      document.getElementById('inbound-step-3').classList.add('hidden');
+      document.getElementById('step-dot-2').className = 'w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-bold transition-all';
+      document.getElementById('step-line-1').style.width = '0';
+      document.getElementById('step-dot-3').className = 'w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-bold transition-all';
+      document.getElementById('step-line-2').style.width = '0';
+      document.getElementById('input-pid').value = '';
+      document.getElementById('input-pl').value = '';
+      document.getElementById('form-product').reset();
+      setTimeout(() => document.getElementById('input-pid').focus(), 300);
+    }
+
+    function handleEnter(e, step) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        nextStep(step);
+      }
+    }
+
+    function nextStep(step) {
+      if (step === 1) {
+        const pid = document.getElementById('input-pid').value.trim();
+        if (!pid) return Swal.fire('แจ้งเตือน', 'กรุณาสแกนหรือพิมพ์รหัสสินค้า (ID)', 'warning');
+        inboundData.id = pid;
+        stopCamera(1);
+        document.getElementById('inbound-step-1').classList.add('hidden');
+        document.getElementById('inbound-step-2').classList.remove('hidden');
+        document.getElementById('step-dot-2').className = 'w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold';
+        document.getElementById('step-line-1').style.width = '100%';
+        setTimeout(() => document.getElementById('input-pl').focus(), 300);
+      } else if (step === 2) {
+        const pl = document.getElementById('input-pl').value.trim().toUpperCase();
+        if (!pl || pl.length < 2) return Swal.fire('แจ้งเตือน', 'กรุณาระบุรหัส Planogram อย่างน้อย 2 ตัวอักษร', 'warning');
+        inboundData.pl = pl;
+        stopCamera(2);
+        document.getElementById('inbound-step-2').classList.add('hidden');
+        document.getElementById('inbound-step-3').classList.remove('hidden');
+        document.getElementById('step-dot-3').className = 'w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold';
+        document.getElementById('step-line-2').style.width = '100%';
+        document.getElementById('form-id').value = inboundData.id;
+        document.getElementById('form-pl').value = inboundData.pl;
+        document.getElementById('form-pma').value = 'PMA ' + pl.substring(0, 2);
+        document.getElementById('form-mfg').value = new Date().toISOString().split('T')[0];
+      }
+    }
+
+    async function submitProduct(e) {
+      e.preventDefault();
+      Swal.showLoading();
+      try {
+        const payload = {
+          id: document.getElementById('form-id').value,
+          pl: document.getElementById('form-pl').value,
+          pma: document.getElementById('form-pma').value,
+          name: document.getElementById('form-name').value,
+          qty: document.getElementById('form-qty').value,
+          price: document.getElementById('form-price').value,
+          mfg: document.getElementById('form-mfg').value,
+          exp: document.getElementById('form-exp').value
+        };
+
+        const res = await fetch('/api/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          Swal.fire({ icon: 'success', title: 'บันทึกสินค้าสำเร็จ!', timer: 1500, showConfirmButton: false });
+          resetInbound();
+          checkBellStatus();
+        } else {
+          Swal.fire('Error', data.message || 'บันทึกไม่สำเร็จ', 'error');
+        }
+      } catch (err) {
+        Swal.fire('Error', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
+      }
+    }
+
+    function startCamera(step) {
+      document.getElementById(`reader-wrapper-${step}`).classList.remove('hidden');
+      const scanner = new Html5QrcodeScanner(`reader-${step}`, { fps: 10, qrbox: { width: 250, height: 250 } });
+      if (step === 1) html5QrCode_1 = scanner;
+      else html5QrCode_2 = scanner;
+
+      scanner.render((txt) => {
+        document.getElementById(step === 1 ? 'input-pid' : 'input-pl').value = txt;
+        scanner.clear();
+        document.getElementById(`reader-wrapper-${step}`).classList.add('hidden');
+        nextStep(step);
+      });
+    }
+
+    function stopCamera(step) {
+      document.getElementById(`reader-wrapper-${step}`).classList.add('hidden');
+      if (step === 1 && html5QrCode_1) { html5QrCode_1.clear(); html5QrCode_1 = null; }
+      if (step === 2 && html5QrCode_2) { html5QrCode_2.clear(); html5QrCode_2 = null; }
+    }
+
+    // --- 8. Seed Demo Data ---
+    function seedDemoData() {
+      Swal.fire({
+        title: 'สร้างข้อมูลทดสอบ 50 รายการ?',
+        text: 'ข้อมูลเดิมทั้งหมดจะถูกล้างและแทนที่ด้วยชุดข้อมูลทดสอบใหม่',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#10b981',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'สร้างข้อมูลเลย!',
+        cancelButtonText: 'ยกเลิก'
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          try {
+            showLoading(true);
+            const res = await fetch('/api/seed', { method: 'POST' });
+            const data = await res.json();
+            showLoading(false);
+            if (data.success) {
+              Swal.fire('สำเร็จ!', `สร้างข้อมูลสินค้าตัวอย่าง ${data.count} รายการเรียบร้อย`, 'success');
+              goHome();
+              checkBellStatus();
+            } else {
+              Swal.fire('Error', data.message || 'ไม่สามารถสร้างข้อมูลตัวอย่างได้', 'error');
+            }
+          } catch (err) {
+            showLoading(false);
+            Swal.fire('Error', 'ไม่สามารถสร้างข้อมูลตัวอย่างได้', 'error');
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
